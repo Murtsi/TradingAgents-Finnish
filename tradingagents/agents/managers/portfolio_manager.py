@@ -1,4 +1,5 @@
 from tradingagents.agents.utils.agent_utils import build_instrument_context
+from tradingagents.agents.utils.prompt_loader import load_fi_prompt  # FORK: Suomi-lokalisointi
 
 
 def create_portfolio_manager(llm, memory):
@@ -21,36 +22,33 @@ def create_portfolio_manager(llm, memory):
         for i, rec in enumerate(past_memories, 1):
             past_memory_str += rec["recommendation"] + "\n\n"
 
-        prompt = f"""As the Portfolio Manager, synthesize the risk analysts' debate and deliver the final trading decision.
+        # FORK: Suomi-lokalisointi — Finnish system prompt + data
+        _fi_prompt = load_fi_prompt("portfolio_manager_system")
+        prompt = f"""{_fi_prompt}
 
 {instrument_context}
 
 ---
 
-**Rating Scale** (use exactly one):
-- **Buy**: Strong conviction to enter or add to position
-- **Overweight**: Favorable outlook, gradually increase exposure
-- **Hold**: Maintain current position, no action needed
-- **Underweight**: Reduce exposure, take partial profits
-- **Sell**: Exit position or avoid entry
+**Suositusasteikko** (käytä täsmälleen yhtä):
+- **Osta** (Buy): Vahva vakaumus — osta tai lisää positiota
+- **Ylipainota** (Overweight): Myönteinen näkymä, lisää altistusta asteittain
+- **Pidä** (Hold): Säilytä nykyinen positio, ei toimenpiteitä
+- **Alipainota** (Underweight): Vähennä altistusta, ota osittaisia voittoja
+- **Myy** (Sell): Sulje positio tai vältä ostamista
 
-**Context:**
-- Trader's proposed plan: **{trader_plan}**
-- Lessons from past decisions: **{past_memory_str}**
-
-**Required Output Structure:**
-1. **Rating**: State one of Buy / Overweight / Hold / Underweight / Sell.
-2. **Executive Summary**: A concise action plan covering entry strategy, position sizing, key risk levels, and time horizon.
-3. **Investment Thesis**: Detailed reasoning anchored in the analysts' debate and past reflections.
+**Konteksti:**
+- Kauppiaan suunnitelma: {trader_plan}
+- Aiemmista päätöksistä opitut opit: {past_memory_str}
 
 ---
 
-**Risk Analysts Debate History:**
+**Riskianalyytikkojen väittelyhistoria:**
 {history}
 
 ---
 
-Be decisive and ground every conclusion in specific evidence from the analysts."""
+Ole päättäväinen ja perusta kaikki päätelmät analyytikkojen konkreettisiin havaintoihin. Kirjoita koko raportti suomeksi."""
 
         response = llm.invoke(prompt)
 

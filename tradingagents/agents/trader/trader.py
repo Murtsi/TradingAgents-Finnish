@@ -3,6 +3,7 @@ import time
 import json
 
 from tradingagents.agents.utils.agent_utils import build_instrument_context
+from tradingagents.agents.utils.prompt_loader import load_fi_prompt  # FORK: Suomi-lokalisointi
 
 
 def create_trader(llm, memory):
@@ -23,17 +24,29 @@ def create_trader(llm, memory):
             for i, rec in enumerate(past_memories, 1):
                 past_memory_str += rec["recommendation"] + "\n\n"
         else:
-            past_memory_str = "No past memories found."
+            past_memory_str = "Ei aiempia muistoja."
 
+        # FORK: Suomi-lokalisointi — Finnish system prompt
+        _fi_prompt = load_fi_prompt("trader_system")
         context = {
             "role": "user",
-            "content": f"Based on a comprehensive analysis by a team of analysts, here is an investment plan tailored for {company_name}. {instrument_context} This plan incorporates insights from current technical market trends, macroeconomic indicators, and social media sentiment. Use this plan as a foundation for evaluating your next trading decision.\n\nProposed Investment Plan: {investment_plan}\n\nLeverage these insights to make an informed and strategic decision.",
+            "content": (
+                f"Analyytikkojen kattavan analyysin pohjalta tässä on sijoitussuunnitelma yhtiölle {company_name}. "
+                f"{instrument_context} Suunnitelma sisältää näkemykset teknisistä trendeistä, "
+                f"makrotaloudesta ja sentimentistä. Käytä tätä kaupankäyntipäätöksesi pohjana.\n\n"
+                f"Ehdotettu sijoitussuunnitelma: {investment_plan}\n\n"
+                f"Päätä analyysisi selkeään suositukseen: OSTA, PIDÄ tai MYY. "
+                f"Päätä vastauksesi aina lauseeseen 'FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL**'."
+            ),
         }
 
         messages = [
             {
                 "role": "system",
-                "content": f"""You are a trading agent analyzing market data to make investment decisions. Based on your analysis, provide a specific recommendation to buy, sell, or hold. End with a firm decision and always conclude your response with 'FINAL TRANSACTION PROPOSAL: **BUY/HOLD/SELL**' to confirm your recommendation. Apply lessons from past decisions to strengthen your analysis. Here are reflections from similar situations you traded in and the lessons learned: {past_memory_str}""",
+                "content": (
+                    f"{_fi_prompt}\n\n"
+                    f"Aiemmista tilanteista opitut opit: {past_memory_str}"
+                ),
             },
             context,
         ]

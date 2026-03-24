@@ -8,6 +8,7 @@ from tradingagents.agents.utils.news_data_tools import (
     get_global_news,
     get_finnish_news,
 )
+from tradingagents.agents.utils.prompt_loader import load_fi_prompt  # FORK: Suomi-lokalisointi
 from tradingagents.dataflows.config import get_config
 
 
@@ -26,16 +27,14 @@ def create_news_analyst(llm):
             get_finnish_news,
         ]
 
+        # FORK: Suomi-lokalisointi — Finnish system prompt + tool calling instructions
         system_message = (
-            "You are a news researcher analyzing a Finnish stock on the Helsinki Stock Exchange (OMXH). "
-            "ALWAYS start by calling get_all_stock_news_combined(ticker, trade_date) — it fetches "
-            "Yahoo Finance news, Finnish RSS sources (Kauppalehti, YLE Talous), and ECB/Nordic macro "
-            "context in a single call. Only use the individual tools (get_news, get_global_news, "
-            "get_finnish_news) if you need additional targeted searches after the combined call. "
-            "Focus your report on: ECB interest rate decisions, Nordic economic conditions, "
-            "EUR/USD impact on Finnish exporters, Finnish regulatory environment, and any "
-            "Finnish-language coverage. Write a comprehensive report with actionable insights."
-            + " Append a Markdown table at the end summarizing key points."
+            load_fi_prompt("news_system")
+            + "\n\nALWAYS start by calling get_all_stock_news_combined(ticker, trade_date) — "
+            "it fetches Yahoo Finance news, Finnish RSS sources (Kauppalehti, YLE Talous), "
+            "and ECB/Nordic macro context in a single call. "
+            "Only use the individual tools (get_news, get_global_news, get_finnish_news) "
+            "if you need additional targeted searches after the combined call."
         )
 
         prompt = ChatPromptTemplate.from_messages(

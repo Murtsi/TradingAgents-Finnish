@@ -84,9 +84,31 @@ FINNISH_CONFIG = {
 }
 
 
+# ── TEST-tilan ylikirjoitukset (env TEST_MODE=true) ────────────────────
+# Kaikki 4 analyytikkoa ajetaan, mutta tokenit rajoitetaan
+# jotta yksittäinen testitestaus maksaa ~0.02–0.05€ eikä 0.50€.
+TEST_OVERRIDES = {
+    "max_debate_rounds": 1,
+    "max_risk_discuss_rounds": 1,
+    # max_tokens rajoittaa jokaisen agentin vastauspituuden
+    # → lyhyemmät raportit, huomattavasti pienempi API-lasku
+    "max_tokens": 500,
+}
+
+
 def get_finnish_config(overrides: dict = None) -> dict:
-    """Palauttaa Suomi-konfiguraation valinnaisten ylikirjoitusten kanssa."""
+    """
+    Palauttaa Suomi-konfiguraation valinnaisten ylikirjoitusten kanssa.
+
+    Jos ympäristömuuttuja TEST_MODE=true, lisätään TEST_OVERRIDES automaattisesti
+    (max_tokens=500, max_debate_rounds=1) — kaikki 4 analyytikkoa ajetaan silti.
+    """
     config = FINNISH_CONFIG.copy()
+
+    test_mode = os.getenv("TEST_MODE", "").lower() in ("1", "true", "yes")
+    if test_mode:
+        config.update(TEST_OVERRIDES)
+
     if overrides:
         config.update(overrides)
     return config

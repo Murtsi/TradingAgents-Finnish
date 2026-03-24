@@ -15,6 +15,7 @@ import os
 from dotenv import load_dotenv
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler
 from telegram_bot.handlers import analysoi_command, full_report_callback
+from tradingagents.llm_cache import setup_llm_cache
 
 load_dotenv()
 
@@ -37,6 +38,10 @@ def main() -> None:
     app = ApplicationBuilder().token(token).build()
     app.add_handler(CommandHandler("analysoi", analysoi_command))
     app.add_handler(CallbackQueryHandler(full_report_callback, pattern=r"^raportti:"))
+
+    # Aktivoi pysyvä LLM-vastausten välimuisti (SQLite)
+    # Samat API-kutsut palautuvat välimuistista ilman uusia kustannuksia
+    setup_llm_cache()
 
     logger.info("🤖 KauppaAgentit-botti käynnistyy...")
     app.run_polling(drop_pending_updates=True)

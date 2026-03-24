@@ -650,20 +650,26 @@ kauppa-agentit/
 ### Vaihe 1: Fork + perus lokalisointi (MVP)
 - [x] Forkkaa TradingAgents, lisää upstream remote
 - [x] Luo finnish_config.py Suomi-asetuksilla
-- [x] Käännä agenttipromptit suomeksi (fi_prompts/) — tiedostot luotu, ei vielä kytketty agentteihin
-- [ ] Testaa alkuperäinen CLI suomennetuilla prompteilla — agentit vastaavat vielä englanniksi
+- [x] Käännä agenttipromptit suomeksi (fi_prompts/) — kytketty kaikkiin agentteihin prompt_loader.py:n kautta
+- [x] Testaa alkuperäinen CLI suomennetuilla prompteilla — kaikki agentit vastaavat nyt suomeksi
 - [x] Varmista upstream toimii: Nokia-analyysi tuotti SELL-päätöksen @ €6.87 (2026-03-24)
 - [ ] Docker Compose -ympäristö pystyyn (PostgreSQL + Redis + app)
 
 ### Vaihe 2: OMXH-data + suomalaiset lähteet
 - [x] Lisää omxh_utils.py Helsingin pörssin datalle (.HE-suffiksi, OMXH_TICKERS-kartta)
-- [ ] Sentimenttiagentille Kauppalehti/Inderes -datasyöte — osittain: Kauppalehti RSS uutisagentissa
+- [x] Sentimenttiagentille Kauppalehti/Inderes -datasyöte — get_finnish_news lisätty social_media_analyst.py:hyn, Yahoo Finance fallback
 - [x] Uutisagentille suomalaiset uutislähteet — Kauppalehti + YLE Talous RSS (finnish_news.py), ECB/Nordic-hakutermit, yhdistetty get_all_stock_news_combined (1 tool call vs 3), LRU-välimuisti RSS-hauille, OMXH_KEYWORDS-kartta yhtiökohtaisille termeille
 - [ ] Testaa Nokia, Nordea, Neste, UPM, KONE -osakkeilla — Nokia testattu ✓
 
+### Vaihe 2.5: Laatu- ja regressiotestit analyysille
+- [ ] Luo `tests/test_backtests/` — aja sama ticker (esim. NOKIA) 3× peräkkäin, tarkista että päätös (OSTA/PIDÄ/MYY) pysyy johdonmukaisena (LLM-lämpötila 0 tai matala)
+- [ ] Seuraa luottamusväliä: kirjaa jokaisen ajon `judge_decision`-vastaus JSON-tiedostoon ja laske kuinka usein päätös muuttuu
+- [ ] Luo `tests/fixtures/golden_baselines/` — ei tarkoita identtisiä vastauksia, vaan että päätössuunta (positiivinen/negatiivinen) pysyy oikeana tunnetuille historiadatapointeille
+- [ ] Lisää `pytest`-testi joka hälyttää jos päätös vaihtuu yli 50 % ajoista samalla syötedatalla (hallusinaatiovaroitus)
+
 ### Vaihe 3: Telegram-botti (nopein tie käyttäjiin)
 - [x] python-telegram-bot -pohjainen botti (telegram_bot/ -paketti)
-- [x] `/analysoi NOKIA` → agenttien ajo → tiivistelmä chattiin — toimii, progress-päivitykset kunnossa
+- [x] `/analysoi NOKIA` → agenttien ajo → tiivistelmä chattiin — toimii; korjaukset: callbacks graph.invoke():lle (progress-päivitykset), formatter (parse_decision OVERWEIGHT/UNDERWEIGHT, lausetason katkaisu, markdown-siivous)
 - [ ] `/salkku` → käyttäjän seurantalista
 - [x] Whitelist-pohjainen pääsynhallinta (TELEGRAM_WHITELIST env var)
 - [ ] Suomalaiset sijoitus-Telegram-ryhmät markkinointikanavana
@@ -1177,9 +1183,13 @@ Yksi täysi analyysi (kaikki agentit, 1 väittelykierros):
 - Uutisanalyytikko: käytä `get_all_stock_news_combined` (1 tool call) eikä 3 erillistä kutsua
 
 ### Kustannushallinta
-- Haiku: ~€0.05/ajo, Sonnet: ~€0.46/ajo — pidä Haiku testauksessa
+- Haiku: ~€0.50/ajo (4 analyytikkoa), Sonnet: ~€1.50+/ajo — kustannus tulee akkumuloituneesta viestihistoriasta
+- **TEST_MODE=true** (.env) → kaikki 4 analyytikkoa + max_tokens=500 per agentti → halvemmat, lyhyemmät raportit
+- SQLite LLM-cache (.llm_cache.db) — samat API-kutsut palauttavat välimuistista, ei uusia kustannuksia
+- Tuotannossa: TEST_MODE=false tai poista → täydet tokenirajat (oletusarvot)
 - `get_all_stock_news_combined` säästää ~50 % LLM-pyörähdyksistä uutisanalyytikossa
 - Jokainen tool call = yksi LLM-pyörähdys = kuluja → minimoi tool callien määrä
+- `deep_think_llm` = Haiku testauksessa, vaihda Sonnetiin kun analysointitarkkuus tärkeää
 
 ### Priorisointi
 - Toimiva fork ensin → lokalisointi → Telegram-botti → Web-UI → creditit → portfolio → B2B

@@ -153,6 +153,11 @@ class TradingAgentsGraph:
             if effort:
                 kwargs["effort"] = effort
 
+        # max_tokens rajoittaa vastauksen pituuden (TEST_MODE käyttää 500)
+        max_tokens = self.config.get("max_tokens")
+        if max_tokens:
+            kwargs["max_tokens"] = max_tokens
+
         return kwargs
 
     def _create_tool_nodes(self) -> Dict[str, ToolNode]:

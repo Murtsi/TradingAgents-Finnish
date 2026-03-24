@@ -39,11 +39,24 @@ def _sync_run_analysis(ticker: str, callback: AnalysisProgressCallback) -> dict:
     """
     Synkroninen funktio joka ajetaan threadissa.
     Uusi TradingAgentsGraph per pyyntö (instanssi on tilallinen — ei jaeta).
+
+    Kaikki 4 analyytikkoa aina.
+    TEST_MODE=true → get_finnish_config() lisää max_tokens=500 (halvempi, lyhyemmät raportit).
     """
     config = get_finnish_config({
         "results_dir": os.path.join(_PROJECT_ROOT, "results"),
     })
-    graph = TradingAgentsGraph(config=config, callbacks=[callback], debug=False)
+
+    # Kaikki 4 analyytikkoa aina — TEST_MODE rajoittaa max_tokens (kustannukset),
+    # ei analyysilaajuutta (get_finnish_config() hoitaa TEST_OVERRIDES automaattisesti)
+    selected_analysts = ["market", "social", "news", "fundamentals"]
+
+    graph = TradingAgentsGraph(
+        config=config,
+        callbacks=[callback],
+        debug=False,
+        selected_analysts=selected_analysts,
+    )
     trade_date = str(date.today())
     final_state, decision = graph.propagate(ticker, trade_date)
     final_state["_decision_raw"] = decision
