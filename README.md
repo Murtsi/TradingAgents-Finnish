@@ -8,13 +8,13 @@
 
 ---
 
-## Mita tama projekti on?
+## Mitä tämä projekti on?
 
-**KauppaAgentit** on suomenkielinen laajennus TradingAgents-kehyksesta. Alkuperainen projekti on monikansallinen LLM-pohjainen kaupankayntijarjestelma — tama fork tuo sen lahemmaksi Suomea:
+**KauppaAgentit** on suomenkielinen laajennus TradingAgents-kehyksestä. Alkuperäinen projekti on monikansallinen LLM-pohjainen kaupankäyntijarjestelmä — tämä fork tuo sen lähemmäksi Suomea:
 
 - **Suomenkieliset promptit** (`fi_prompts/`) — agentit ajattelevat ja vastaavat suomeksi
 - **Telegram-botti** (`telegram_bot/`) — analysoi OMXH-osakkeita suoraan Telegramista
-- **Suomalainen uutisvirtaus** — hakee dataa suomalaisista uutislahteista
+- **Suomalainen uutisvirtaus** — hakee dataa suomalaisista uutisahteista
 - **PostgreSQL-tietokanta** (`db/`) — tallentaa analyysit ja tulokset
 - **Arviointitulokset** (`eval_results/`) — backtesting-tulokset suomalaisilla osakkeilla
 
@@ -24,13 +24,13 @@
 
 ```
 TradingAgents-Finnish/
-|-- tradingagents/        # Ydinjarjestelma (upstream)
+|-- tradingagents/        # Ydinjärjestelmä (upstream)
 |-- fi_prompts/           # Suomenkieliset promptit agentteille
 |-- telegram_bot/         # Telegram-botti (/analysoi NOKIA)
 |-- db/                   # PostgreSQL-schema ja migraatiot
 |-- eval_results/         # Backtesting-tulokset
 |-- docs/superpowers/     # Tekninen dokumentaatio ja suunnitelmat
-|-- cli/                  # Komentoriviliittyma
+|-- cli/                  # Komentoriviliittymä
 |-- tests/                # Testit
 ```
 
@@ -38,13 +38,13 @@ TradingAgents-Finnish/
 
 ## Telegram-botti (KauppaAgentit)
 
-Helpoin tapa kayttaa tata projektia on Telegram-botin kautta.
+Helpoin tapa käyttää tätä projektia on Telegram-botin kautta.
 
-### Kaynnistys
+### Käynnistys
 
 1. Hanki bot token: Telegram → `@BotFather` → `/newbot`
 2. Hanki oma Telegram-ID: `@userinfobot`
-3. Lisaa `.env`-tiedostoon:
+3. Lisää `.env`-tiedostoon:
 
 ```env
 TELEGRAM_BOT_TOKEN=123456:ABC-DEF...
@@ -52,7 +52,7 @@ TELEGRAM_WHITELIST=123456789
 ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-4. Kaynnista:
+4. Käynnistä:
 
 ```bash
 python -m telegram_bot.bot
@@ -62,11 +62,11 @@ python -m telegram_bot.bot
 
 | Komento | Kuvaus |
 |---|---|
-| `/analysoi NOKIA` | Taysi osakeanalyysi (1–5 min) |
+| `/analysoi NOKIA` | Täysi osakeanalyysi (1–5 min) |
 
-### OMXH-esimerkkeja
+### OMXH-esimerkkejä
 
-| Yhtio | Komento |
+| Yhtiö | Komento |
 |---|---|
 | Nokia | `/analysoi NOKIA` |
 | Nordea | `/analysoi NORDEA` |
@@ -76,7 +76,7 @@ python -m telegram_bot.bot
 
 ---
 
-## Asennus (kehitysymparisto)
+## Asennus (kehitysympäristö)
 
 ### 1. Kloonaa repositorio
 
@@ -85,14 +85,14 @@ git clone https://github.com/Murtsi/TradingAgents-Finnish.git
 cd TradingAgents-Finnish
 ```
 
-### 2. Luo virtuaaliymparisto
+### 2. Luo virtuaaliympäristö
 
 ```bash
 conda create -n tradingagents python=3.13
 conda activate tradingagents
 ```
 
-Tai `uv`-tyokalulla:
+Tai `uv`-työkalulla:
 
 ```bash
 uv sync
@@ -108,7 +108,7 @@ pip install -r requirements.txt
 
 ### 4. API-avaimet
 
-Kopioi `.env.example` → `.env` ja tayta avaimesi:
+Kopioi `.env.example` → `.env` ja täytä avaimesi:
 
 ```bash
 cp .env.example .env
@@ -122,22 +122,22 @@ GOOGLE_API_KEY=...        # Google (Gemini)
 ANTHROPIC_API_KEY=...     # Anthropic (Claude)
 XAI_API_KEY=...           # xAI (Grok)
 OPENROUTER_API_KEY=...    # OpenRouter
-ALPHA_VANTAGE_API_KEY=... # Alpha Vantage (markkiinadata)
+ALPHA_VANTAGE_API_KEY=... # Alpha Vantage (markkinadata)
 ```
 
 ---
 
-## CLI-kaytto
+## CLI-käyttö
 
 ```bash
 python -m cli.main
 ```
 
-Valitse ticker, paivamaara, LLM-tarjoaja ja analyysin syvyys interaktiivisessa valikossa.
+Valitse ticker, päivämäärä, LLM-tarjoaja ja analyysin syvyys interaktiivisessa valikossa.
 
 ---
 
-## Python-kaytto
+## Python-käyttö
 
 ```python
 from tradingagents.graph.trading_graph import TradingAgentsGraph
@@ -160,20 +160,20 @@ Katso kaikki asetukset: `tradingagents/default_config.py`
 
 ## Kehys (upstream)
 
-KauppaAgentit perustuu TradingAgents-kehykseen, joka simuloi oikean kauppayhtion dynamiikkaa useilla erikoistuneilla LLM-agentteilla:
+KauppaAgentit perustuu TradingAgents-kehykseen, joka simuloi oikean kauppayhtiön dynamiikkaa useilla erikoistuneilla LLM-agentteilla:
 
 | Agentti | Rooli |
 |---|---|
-| **Fundamenttianalyytikko** | Yhtion taloudellinen analyysi ja sisainen arvo |
+| **Fundamenttianalyyytikko** | Yhtiön taloudellinen analyysi ja sisäinen arvo |
 | **Sentimenttianalyytikko** | Sosiaalinen media ja markkinamieliala |
 | **Uutisanalyytikko** | Globaalit uutiset ja makrotalous |
 | **Tekninen analyytikko** | MACD, RSI ja kaaviokuviot |
-| **Tutkijatiimi** | Bullish vs. bearish -vaittely |
-| **Kaupankavija-agentti** | Paatoksenteko analyyseista |
+| **Tutkijatiimi** | Bullish vs. bearish -väittely |
+| **Kaupankävijä-agentti** | Päätöksenteko analyyseistä |
 | **Riskienhallinta** | Portfolion riski ja volatiilisuus |
-| **Portfoliopaallikko** | Hyvaksyy/hylkaa transaktiot |
+| **Portfoliopäällikkö** | Hyväksy/hylkää transaktiot |
 
-> **Vastuuvapauslauseke:** Tama jarjestelma on tarkoitettu tutkimuskayyttoon. Se ei ole sijoitusneuvontaa. Kaupankayntisuorituskyky vaihtelee mallista, laadusta ja markkinaolosuhteista riippuen.
+> **Vastuuvapauslauseke:** Tämä järjestelmä on tarkoitettu tutkimuslkäyttöön. Se ei ole sijoitusneuvontaa. Kaupankäyntisuorituskyky vaihtelee mallista, laadusta ja markkinaolosuhteista riippuen.
 
 ---
 
@@ -187,9 +187,9 @@ pytest tests/
 
 ## Upstream & lisenssi
 
-Tama projekti on forkattu [TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents) -repositoriosta (Apache 2.0).
+Tämä projekti on forkattu [TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents) -repositoriosta (Apache 2.0).
 
-Alkuperainen tutkimusjulkaisu:
+Alkuperäinen tutkimusjulkaisu:
 
 ```bibtex
 @misc{xiao2025tradingagentsmultiagentsllmfinancial,
