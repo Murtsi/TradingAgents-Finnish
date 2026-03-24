@@ -13,7 +13,9 @@ FINNISH_CONFIG = {
 
     # ── LLM-asetukset ──────────────────────────────────────────────
     "llm_provider": "anthropic",
-    "deep_think_llm": "claude-sonnet-4-20250514",   # Syvä analyysi, väittely
+    # Kustannushuomio: Sonnet käyttää research_manager + portfolio_manager -agenteissa
+    # Vaihda takaisin "claude-sonnet-4-20250514" kun siirryt tuotantoon
+    "deep_think_llm": "claude-haiku-4-5-20251001",  # Testaus: Haiku ~0.05€/ajo vs Sonnet ~0.46€
     "quick_think_llm": "claude-haiku-4-5-20251001", # Nopeat tehtävät
     "backend_url": None,  # Anthropic käyttää omaa SDK:ta
 

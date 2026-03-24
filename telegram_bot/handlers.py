@@ -84,13 +84,21 @@ async def analysoi_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             return
 
     # 7. Lähetä tulos + [📄 Koko raportti] -nappi
-    result_msg = await update.message.reply_text(
-        summary,
-        parse_mode=ParseMode.MARKDOWN,
-        reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("📄 Koko raportti", callback_data=f"raportti:{raw_ticker}")
-        ]]),
-    )
+    # Kokeile Markdown ensin, fallback plain text jos parse epäonnistuu
+    keyboard = InlineKeyboardMarkup([[
+        InlineKeyboardButton("📄 Koko raportti", callback_data=f"raportti:{raw_ticker}")
+    ]])
+    try:
+        result_msg = await update.message.reply_text(
+            summary,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=keyboard,
+        )
+    except Exception:
+        result_msg = await update.message.reply_text(
+            summary,
+            reply_markup=keyboard,
+        )
     _full_reports[result_msg.message_id] = full_report
     await progress_msg.delete()
 
@@ -111,6 +119,8 @@ async def full_report_callback(update: Update, context: ContextTypes.DEFAULT_TYP
         return
 
     # Jaa 4000 merkin palasiin (Telegram max 4096)
+    # Käytetään plain text — raportti sisältää agenttien tuottamaa tekstiä joka
+    # voi rikkoa Markdown-parserin.
     LIMIT = 4000
     for chunk in [full_report[i:i+LIMIT] for i in range(0, len(full_report), LIMIT)]:
-        await query.message.reply_text(chunk, parse_mode=ParseMode.MARKDOWN)
+        await query.message.reply_text(chunk)

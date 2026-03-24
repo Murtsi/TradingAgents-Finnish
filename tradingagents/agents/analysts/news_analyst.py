@@ -1,10 +1,12 @@
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 import time
 import json
-from tradingagents.agents.utils.agent_utils import (
-    build_instrument_context,
-    get_global_news,
+from tradingagents.agents.utils.agent_utils import build_instrument_context
+from tradingagents.agents.utils.news_data_tools import (
+    get_all_stock_news_combined,
     get_news,
+    get_global_news,
+    get_finnish_news,
 )
 from tradingagents.dataflows.config import get_config
 
@@ -14,14 +16,26 @@ def create_news_analyst(llm):
         current_date = state["trade_date"]
         instrument_context = build_instrument_context(state["company_of_interest"])
 
+        # get_all_stock_news_combined fetches Yahoo Finance + Kauppalehti/YLE RSS +
+        # ECB/Nordic macro in ONE tool call instead of three separate calls.
+        # The individual tools remain as fallback if the LLM chooses to dig deeper.
         tools = [
+            get_all_stock_news_combined,
             get_news,
             get_global_news,
+            get_finnish_news,
         ]
 
         system_message = (
-            "You are a news researcher tasked with analyzing recent news and trends over the past week. Please write a comprehensive report of the current state of the world that is relevant for trading and macroeconomics. Use the available tools: get_news(query, start_date, end_date) for company-specific or targeted news searches, and get_global_news(curr_date, look_back_days, limit) for broader macroeconomic news. Provide specific, actionable insights with supporting evidence to help traders make informed decisions."
-            + """ Make sure to append a Markdown table at the end of the report to organize key points in the report, organized and easy to read."""
+            "You are a news researcher analyzing a Finnish stock on the Helsinki Stock Exchange (OMXH). "
+            "ALWAYS start by calling get_all_stock_news_combined(ticker, trade_date) — it fetches "
+            "Yahoo Finance news, Finnish RSS sources (Kauppalehti, YLE Talous), and ECB/Nordic macro "
+            "context in a single call. Only use the individual tools (get_news, get_global_news, "
+            "get_finnish_news) if you need additional targeted searches after the combined call. "
+            "Focus your report on: ECB interest rate decisions, Nordic economic conditions, "
+            "EUR/USD impact on Finnish exporters, Finnish regulatory environment, and any "
+            "Finnish-language coverage. Write a comprehensive report with actionable insights."
+            + " Append a Markdown table at the end summarizing key points."
         )
 
         prompt = ChatPromptTemplate.from_messages(

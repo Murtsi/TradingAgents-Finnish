@@ -1,7 +1,13 @@
 from __future__ import annotations
+import re
 from datetime import datetime
 
 DISCLAIMER = "⚠️ Tämä on AI:n tuottama analyysi, ei sijoitussuositus."
+
+# BUY/SELL/HOLD -variantit joita agentit käyttävät (ensimmäinen osuma voittaa)
+_SELL_WORDS  = {"sell", "underweight", "myy", "myyda", "myi"}
+_BUY_WORDS   = {"buy", "overweight", "osta"}
+_HOLD_WORDS  = {"hold", "neutral", "pidä", "pida", "maintain"}
 
 DECISION_MAP = {
     "buy":  "OSTA",
@@ -17,9 +23,58 @@ DECISION_EMOJI = {
 
 
 def parse_decision(raw: str) -> str:
-    """Muuntaa upstream BUY/SELL/HOLD → OSTA/MYY/PIDÄ."""
-    first = raw.strip().split()[0].lower().rstrip("-,:.")
-    return DECISION_MAP.get(first, "PIDÄ")
+    """
+    Etsii ensimmäisen selvän BUY/SELL/HOLD-signaalin koko tekstistä.
+    Agentit käyttävät mm. OVERWEIGHT/UNDERWEIGHT/RATING: **SELL** -muotoja
+    joten pelkkä ensimmäisen sanan tarkistus ei riitä.
+    """
+    if not raw:
+        return "PIDÄ"
+
+    # Etsi kaikki sanat tekstistä (lowercase, ilman erikoismerkkejä)
+    words = set(re.findall(r"[a-zäöå]+", raw.lower()))
+
+    # SELL saa etusijan — epäselvässä tilanteessa varovaisuus ensin
+    if words & _SELL_WORDS:
+        return "MYY"
+    if words & _BUY_WORDS:
+        return "OSTA"
+    if words & _HOLD_WORDS:
+        return "PIDÄ"
+    return "PIDÄ"
+
+
+def _strip_markdown(text: str) -> str:
+    """Poistaa Markdown-muotoilun tekstistä jotta se on luettavaa plain textinä."""
+    # Otsikot: ### Foo → FOO (isolla korostuksena)
+    text = re.sub(r"^#{1,6}\s+(.+)$", lambda m: m.group(1).upper(), text, flags=re.MULTILINE)
+    # Lihavointi/kursiivi: **foo** / *foo* / __foo__ / _foo_
+    text = re.sub(r"\*{1,2}([^*\n]+)\*{1,2}", r"\1", text)
+    text = re.sub(r"_{1,2}([^_\n]+)_{1,2}", r"\1", text)
+    # Vaakaviivat
+    text = re.sub(r"^[-─]{3,}\s*$", "─────────────", text, flags=re.MULTILINE)
+    # Linkit: [teksti](url) → teksti
+    text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)
+    # Useampi tyhjä rivi → yksi
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
+
+
+def _truncate(text: str, max_chars: int) -> str:
+    """
+    Katkaisee tekstin viimeisen täyden lauseen kohdalta, ei sanan keskeltä.
+    """
+    if len(text) <= max_chars:
+        return text
+    chunk = text[:max_chars]
+    # Etsi viimeisin lauseen loppu (. ! ?) joka on vähintään puolessa välissä
+    for pattern in (r"[.!?]\s", r"[.!?]\n", r"\n\n"):
+        matches = list(re.finditer(pattern, chunk))
+        if matches:
+            last = matches[-1]
+            if last.end() > max_chars // 2:
+                return chunk[:last.end()].rstrip() + "…"
+    return chunk.rstrip() + "…"
 
 
 def format_finnish_price(price: float) -> str:
@@ -29,13 +84,12 @@ def format_finnish_price(price: float) -> str:
 
 
 def format_summary(state: dict, current_price: float | None = None) -> str:
-    """Lyhyt yhteenveto Telegram-viestiksi."""
+    """Lyhyt yhteenveto Telegram-viestiksi (käyttää Markdown-muotoilua)."""
     ticker_raw = state.get("company_of_interest", "?")
     ticker = ticker_raw.replace(".HE", "")
     date_str = state.get("trade_date", datetime.now().strftime("%Y-%m-%d"))
     try:
-        d = datetime.strptime(date_str, "%Y-%m-%d")
-        date_fi = d.strftime("%d.%m.%Y")
+        date_fi = datetime.strptime(date_str, "%Y-%m-%d").strftime("%d.%m.%Y")
     except ValueError:
         date_fi = date_str
 
@@ -44,18 +98,18 @@ def format_summary(state: dict, current_price: float | None = None) -> str:
     emoji = DECISION_EMOJI.get(suositus, "⬜")
     price_str = format_finnish_price(current_price) if current_price else "—"
 
-    plan = state.get("trader_investment_plan", "")
-    lyhyt = plan[:200].strip()
-    if len(plan) > 200:
-        lyhyt += "…"
+    # Kauppiaan lyhyt perustelu — siistiä plain text, katkaistaan lauseelta
+    plan = state.get("trader_investment_decision", "") or state.get("trader_investment_plan", "")
+    plan_clean = _strip_markdown(plan)
+    lyhyt = _truncate(plan_clean, 300)
 
     lines = [
-        f"📊 *{ticker}* ({ticker_raw}) — {date_fi}",
+        f"📊 *{ticker}* — {date_fi}",
         "━━━━━━━━━━━━━━━━━━━━━",
-        f"{emoji} *SUOSITUS: {suositus}*",
+        f"{emoji} *SIGNAALI: {suositus}*",
         f"💰 Kurssi: {price_str}",
         "",
-        f"📝 _{lyhyt}_",
+        lyhyt,
         "",
         DISCLAIMER,
     ]
@@ -63,37 +117,48 @@ def format_summary(state: dict, current_price: float | None = None) -> str:
 
 
 def format_full_report(state: dict) -> str:
-    """Koko raportti kaikilla agenttien tuloksilla."""
+    """
+    Koko raportti — lähetetään plain textinä (ei parse_mode).
+    Markdown poistetaan _strip_markdown():lla, teksti katkaistaan lauseelta.
+    """
     ticker_raw = state.get("company_of_interest", "?")
     ticker = ticker_raw.replace(".HE", "")
     date_str = state.get("trade_date", "")
-    raw_decision = state.get("final_trade_decision", "")
-    suositus = parse_decision(raw_decision)
+    suositus = parse_decision(state.get("final_trade_decision", ""))
     emoji = DECISION_EMOJI.get(suositus, "⬜")
 
-    sections = [
-        f"📊 *{ticker} — Täysi analyysi* ({date_str})",
+    def section(raw: str, limit: int) -> str:
+        return _truncate(_strip_markdown(raw), limit) if raw else "—"
+
+    parts = [
+        f"📊 {ticker} — Täysi analyysi ({date_str})",
         "━━━━━━━━━━━━━━━━━━━━━",
-        f"{emoji} *Lopullinen suositus: {suositus}*",
+        f"{emoji} Signaali: {suositus}",
         "",
-        "📈 *Tekninen analyysi*",
-        state.get("market_report", "—")[:800],
+        "📈 TEKNINEN ANALYYSI",
+        section(state.get("market_report", ""), 900),
         "",
-        "💬 *Sentimenttianalyysi*",
-        state.get("sentiment_report", "—")[:800],
+        "💬 SENTIMENTTIANALYYSI",
+        section(state.get("sentiment_report", ""), 900),
         "",
-        "📰 *Uutisanalyysi*",
-        state.get("news_report", "—")[:800],
+        "📰 UUTISANALYYSI",
+        section(state.get("news_report", ""), 900),
         "",
-        "📋 *Fundamenttianalyysi*",
-        state.get("fundamentals_report", "—")[:800],
+        "📋 FUNDAMENTTIANALYYSI",
+        section(state.get("fundamentals_report", ""), 900),
         "",
-        "⚖️ *Kaupankäyntipäätös*",
-        state.get("trader_investment_plan", "—")[:600],
+        "⚖️ KAUPANKÄYNTIPÄÄTÖS",
+        section(
+            state.get("trader_investment_decision") or state.get("trader_investment_plan", ""),
+            700,
+        ),
         "",
-        "🛡 *Riskiarvio*",
-        state.get("investment_plan", "—")[:400],
+        "📊 TUTKIJOIDEN PÄÄTELMÄT",
+        section(state.get("investment_plan", ""), 500),
+        "",
+        "🛡 SALKUNHOITAJAN PÄÄTÖS",
+        section(state.get("final_trade_decision", ""), 700),
         "",
         DISCLAIMER,
     ]
-    return "\n".join(sections)
+    return "\n".join(parts)

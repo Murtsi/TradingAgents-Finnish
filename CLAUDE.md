@@ -648,24 +648,24 @@ kauppa-agentit/
 ## Kehityksen vaiheet
 
 ### Vaihe 1: Fork + perus lokalisointi (MVP)
-- [ ] Forkkaa TradingAgents, lisää upstream remote
-- [ ] Luo finnish_config.py Suomi-asetuksilla
-- [ ] Käännä agenttipromptit suomeksi (fi_prompts/)
-- [ ] Testaa alkuperäinen CLI suomennetuilla prompteilla
-- [ ] Varmista upstream toimii: `python main.py` tuottaa tuloksen
+- [x] Forkkaa TradingAgents, lisää upstream remote
+- [x] Luo finnish_config.py Suomi-asetuksilla
+- [x] Käännä agenttipromptit suomeksi (fi_prompts/) — tiedostot luotu, ei vielä kytketty agentteihin
+- [ ] Testaa alkuperäinen CLI suomennetuilla prompteilla — agentit vastaavat vielä englanniksi
+- [x] Varmista upstream toimii: Nokia-analyysi tuotti SELL-päätöksen @ €6.87 (2026-03-24)
 - [ ] Docker Compose -ympäristö pystyyn (PostgreSQL + Redis + app)
 
 ### Vaihe 2: OMXH-data + suomalaiset lähteet
-- [ ] Lisää omxh_utils.py Helsingin pörssin datalle
-- [ ] Sentimenttiagentille Kauppalehti/Inderes -datasyöte
-- [ ] Uutisagentille suomalaiset uutislähteet
-- [ ] Testaa Nokia, Nordea, Neste, UPM, KONE -osakkeilla
+- [x] Lisää omxh_utils.py Helsingin pörssin datalle (.HE-suffiksi, OMXH_TICKERS-kartta)
+- [ ] Sentimenttiagentille Kauppalehti/Inderes -datasyöte — osittain: Kauppalehti RSS uutisagentissa
+- [x] Uutisagentille suomalaiset uutislähteet — Kauppalehti + YLE Talous RSS (finnish_news.py), ECB/Nordic-hakutermit, yhdistetty get_all_stock_news_combined (1 tool call vs 3), LRU-välimuisti RSS-hauille, OMXH_KEYWORDS-kartta yhtiökohtaisille termeille
+- [ ] Testaa Nokia, Nordea, Neste, UPM, KONE -osakkeilla — Nokia testattu ✓
 
 ### Vaihe 3: Telegram-botti (nopein tie käyttäjiin)
-- [ ] python-telegram-bot -pohjainen botti
-- [ ] `/analysoi NOKIA` → agenttien ajo → tiivistelmä chattiin
+- [x] python-telegram-bot -pohjainen botti (telegram_bot/ -paketti)
+- [x] `/analysoi NOKIA` → agenttien ajo → tiivistelmä chattiin — toimii, progress-päivitykset kunnossa
 - [ ] `/salkku` → käyttäjän seurantalista
-- [ ] Ilmainen (1 analyysi/päivä) → kerää käyttäjäkuntaa
+- [x] Whitelist-pohjainen pääsynhallinta (TELEGRAM_WHITELIST env var)
 - [ ] Suomalaiset sijoitus-Telegram-ryhmät markkinointikanavana
 
 ### Vaihe 4: Web-dashboard + käyttäjätilit
@@ -1151,6 +1151,11 @@ Yksi täysi analyysi (kaikki agentit, 1 väittelykierros):
 
 ## Muistiinpanoja Claudelle
 
+### TÄRKEÄ: Session aloitus ja lopetus
+- **AINA** lue CLAUDE.md ennen kuin teet mitään — se on projektin ainoa totuuslähde
+- **AINA** päivitä Kehityksen vaiheet -checkboxit kun tehtävä valmistuu
+- Jos teet muutoksen joka vaikuttaa arkkitehtuuriin, päivitä myös relevantti kohta CLAUDE.md:ssä
+
 ### Yleinen
 - Tämä on FORK — muokkaa upstreamia mahdollisimman vähän, lisää omat tiedostot
 - Käytä context7-MCP:tä LangGraph-dokumentaatioon ennen kuin muokkaat graph-koodia
@@ -1164,10 +1169,17 @@ Yksi täysi analyysi (kaikki agentit, 1 väittelykierros):
 
 ### Tekninen
 - Suosi Anthropic-malleja (Claude) LLM-providerina koska se on meidän ympäristö
+- `deep_think_llm` = "claude-haiku-4-5-20251001" (testaus, ~€0.05/ajo) — vaihda Sonnetiin tuotannossa
 - Älä tee turhia muutoksia upstream-tiedostoihin — helpompi synkata myöhemmin
 - Testaa aina suomalaisilla osakkeilla (NOKIA, NORDEA, NESTE, UPM, KONE)
 - EUR-denominaatio kaikkialla, ei dollareita
 - Docker-ympäristö AINA — ei asenneta suoraan host-koneelle
+- Uutisanalyytikko: käytä `get_all_stock_news_combined` (1 tool call) eikä 3 erillistä kutsua
+
+### Kustannushallinta
+- Haiku: ~€0.05/ajo, Sonnet: ~€0.46/ajo — pidä Haiku testauksessa
+- `get_all_stock_news_combined` säästää ~50 % LLM-pyörähdyksistä uutisanalyytikossa
+- Jokainen tool call = yksi LLM-pyörähdys = kuluja → minimoi tool callien määrä
 
 ### Priorisointi
 - Toimiva fork ensin → lokalisointi → Telegram-botti → Web-UI → creditit → portfolio → B2B

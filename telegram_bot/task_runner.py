@@ -50,16 +50,30 @@ def _sync_run_analysis(ticker: str, callback: AnalysisProgressCallback) -> dict:
     return final_state
 
 
-async def _elapsed_timer(callback: AnalysisProgressCallback, stop: asyncio.Event) -> None:
-    """Background task: päivittää kuluneen ajan 30s välein callback-kautta."""
+async def _elapsed_timer(
+    edit_fn: Callable[[str], Awaitable[None]],
+    ticker: str,
+    stop: asyncio.Event,
+) -> None:
+    """
+    Background task: päivittää progress-viestiä 30s välein suoraan await:lla.
+    EI mene callback-kautta (callback._push_update on tarkoitettu threadeille).
+    """
     elapsed = 0
     while not stop.is_set():
         await asyncio.sleep(30)
         if stop.is_set():
             break
         elapsed += 30
+        mins = elapsed // 60
+        secs = elapsed % 60
         try:
-            callback.update_elapsed(elapsed)
+            await edit_fn(
+                f"📊 Analysoin: *{ticker}*\n"
+                f"━━━━━━━━━━━━━━━━━━━━━\n"
+                f"🔄 Analyysi käynnissä \\(kestää 2–5 min\\)\n"
+                f"⏱ Kulunut: {mins} min {secs:02d} s"
+            )
         except Exception:
             pass
 
@@ -88,7 +102,7 @@ async def run_analysis(
     # Background timer: päivittää kuluneen ajan 30s välein vaikka callbackit
     # eivät laukeaisi — varmistaa että käyttäjä tietää botin olevan hengissä
     timer_stop = asyncio.Event()
-    timer_task = asyncio.create_task(_elapsed_timer(callback, timer_stop))
+    timer_task = asyncio.create_task(_elapsed_timer(edit_message_fn, ticker, timer_stop))
 
     try:
         final_state = await asyncio.wait_for(
