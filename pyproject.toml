@@ -43,3 +43,7 @@ include = ["tradingagents*", "cli*", "telegram_bot*"]
 
 [tool.setuptools.package-data]
 cli = ["static/*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+asyncio_mode = "auto"
