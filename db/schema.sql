@@ -1,7 +1,7 @@
 -- =============================================
 -- KauppaAgentit — PostgreSQL-skeema
 -- =============================================
--- Versio: 1.0
+-- Versio: 1.1 (korjattu taulunnimet)
 -- Kuvaus: Analyysitulosten, päätösten ja
 --         portfolion seurantadata
 
@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS analyysit (
 -- =============================================
 -- Agenttien raportit
 -- =============================================
-CREATE TABLE IF NOT EXISTS agenttirapor tit (
+CREATE TABLE IF NOT EXISTS agentiraportit (
     id              SERIAL PRIMARY KEY,
     analyysi_id     INTEGER NOT NULL REFERENCES analyysit(id) ON DELETE CASCADE,
     agentti         VARCHAR(50) NOT NULL,    -- "fundamentti", "sentimentti", jne.
@@ -31,8 +31,8 @@ CREATE TABLE IF NOT EXISTS agenttirapor tit (
     luotu           TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_agenttirapor tit_analyysi
-    ON agenttirapor tit(analyysi_id);
+CREATE INDEX IF NOT EXISTS idx_agentiraportit_analyysi
+    ON agentiraportit(analyysi_id);
 
 -- =============================================
 -- Kaupankäyntipäätökset
@@ -59,10 +59,8 @@ CREATE TABLE IF NOT EXISTS paatokset (
     vastuuvapautus  TEXT NOT NULL            -- Pakollinen disclaimer
 );
 
-CREATE INDEX IF NOT EXISTS idx_paatokset_analyysi
-    ON paatokset(analyysi_id);
-CREATE INDEX IF NOT EXISTS idx_paatokset_ticker
-    ON paatokset(analyysi_id);
+CREATE INDEX IF NOT EXISTS idx_paatokset_analyysi ON paatokset(analyysi_id);
+CREATE INDEX IF NOT EXISTS idx_paatokset_ticker   ON paatokset(analyysi_id);
 
 -- =============================================
 -- Portfolio-seuranta (valinnainen)
@@ -75,10 +73,9 @@ CREATE TABLE IF NOT EXISTS portfolio (
     ticker          VARCHAR(20) NOT NULL,
     yhtion_nimi     VARCHAR(100),
     kappaleet       NUMERIC(12,4) NOT NULL,  -- omistettu määrä
-    ostoHinta_eur   NUMERIC(12,4) NOT NULL,  -- keskimääräinen ostohinta
-    ostoPvm         DATE        NOT NULL,
+    osto_hinta_eur  NUMERIC(12,4) NOT NULL,  -- keskimääräinen ostohinta
+    osto_pvm        DATE         NOT NULL,
 
-    -- Huomiot
     muistiinpano    TEXT
 );
 
@@ -107,8 +104,8 @@ CREATE INDEX IF NOT EXISTS idx_hintahistoria_ticker_pvm
 -- =============================================
 -- Kommentit
 -- =============================================
-COMMENT ON TABLE analyysit IS 'Jokainen agenttiprosessin ajo tallentuu tähän';
-COMMENT ON TABLE agenttirapor tit IS 'Yksittäisten agenttien tuottamat raportit';
-COMMENT ON TABLE paatokset IS 'Salkunhoitajan lopullinen OSTA/PIDÄ/MYY-päätös';
-COMMENT ON TABLE portfolio IS 'Käyttäjän seurattavat positiot (valinnainen)';
-COMMENT ON TABLE hintahistoria IS 'Yahoo Finance -datan paikallinen välimuisti';
+COMMENT ON TABLE analyysit       IS 'Jokainen agenttiprosessin ajo tallentuu tähän';
+COMMENT ON TABLE agentiraportit  IS 'Yksittäisten agenttien tuottamat raportit';
+COMMENT ON TABLE paatokset       IS 'Salkunhoitajan lopullinen OSTA/PIDÄ/MYY-päätös';
+COMMENT ON TABLE portfolio       IS 'Käyttäjän seurattavat positiot (valinnainen)';
+COMMENT ON TABLE hintahistoria   IS 'Yahoo Finance -datan paikallinen välimuisti';
