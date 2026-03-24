@@ -1,3 +1,53 @@
+#
+## Parannusideat Suomen markkinalle ja käyttäjäkunnalle
+
+### Käyttäjäsegmentit (OST vs. AOT vs. Rahastot)
+Suomessa on yli 400 000 osakesäästötilin haltijaa. OST:lla voi omistaa
+vain pörssilistattuja osakkeita ja First North -yhtiöitä (ei ETF:iä tai
+rahastoja). Talletusraja on 100 000€.
+
+Segmentointi UI:ssa:
+- "Osakesäästötili (OST)" → agentit tietävät kiellot ja veronlykkäysedun
+- "Arvo-osuustili (AOT)" → normaali verotuslogiikka
+- "Pääosin rahastosijoittaja" → Rahastoagentti etualalle, ticker-analyysi taustalle
+
+### Rahasto- ja ETF-agentti (vain AOT-käyttäjille)
+Rakenna `analysts/funds.py` -agentti joka:
+- Vertailee Seligsonin, Nordnetin superrahastojen ja laajojen ETF:ien
+  kulurakennetta (TER), hajautusta ja historiallista tuottoa
+- Näyttää yksinkertaisen rankingin: "matala kulu / laaja hajautus / Suomi-paino"
+- EI koskaan näy OST-profiilisille käyttäjille
+
+### Käsitteiden kansantajuistaminen
+- Luo `docs/termit.md` — suomenkieliset selitykset: P/E, P/B, beta,
+  volatiliteetti, osinkotuotto, free cash flow
+- Web-UI:ssa jokaisen teknisen termin vieressä ❓-ikoni → tooltip
+- Telegram-komento `/termi <nimi>` → lyhyt selitys suomeksi
+
+### Hinnoittelun realistiset kustannusrajat
+Yksi täysi analyysi maksaa API-kuluissa arviolta 0.10–0.40€.
+Hinnoittelu on tarkistettava vastaamaan todellisia kuluja:
+
+| Taso     | Analyysit/kk | Hinta | Marginaali-arvio |
+|----------|-------------|-------|-----------------|
+| Ilmainen | 3 (ei 30)   | 0€    | -0.60–1.20€/kk  |
+| Perus    | 20 (ei 30)  | 19€   | ~11–15€/kk      |
+| Pro      | 80 (ei ∞)   | 49€   | ~17–25€/kk      |
+| Business | 300         | 149€  | ~20–60€/kk      |
+
+### Luottamus ja tietosuoja ("Pankkitason turvallisuus" -narratiivi)
+Lisää etusivulle ja `docs/regulaatio.md`:ään:
+- Ei kerätä pankkitunnuksia tai henkilötunnuksia
+- Portfolio syötetään manuaalisesti tai Nordnet-integraation kautta
+- Kaikki data pysyy EU:ssa (esim. Hetzner Helsinki)
+- Käyttäjädata ei myydä eteenpäin
+- Käyttäjä voi poistaa kaiken datansa milloin tahansa (GDPR Art. 17)
+
+### Backtesting-vastuuvapautus (pakollinen UI:ssa)
+Historialliset backtesting-tulokset eivät ennusta tulevaa.
+Backtesting-näkymässä PITÄÄ näkyä aina:
+"Historialliset tulokset eivät takaa vastaavia tuottoja tulevaisuudessa.
+Tämä on simulaatio, ei lupaus."
 # CLAUDE.md — KauppaAgentit (TradingAgents Suomi-fork)
 
 ## Projektin yleiskuvaus
@@ -632,6 +682,17 @@ kauppa-agentit/
   - "Sentimenttilähteet: Kauppalehti, Inderes, Taloussanomat"
 - Agentti vastaa AINA suomeksi
 
+# TÄRKEÄ OST-RAJOITUS — agenttien on tunnettava tämä
+OST_RAJOITTEET = {
+    "sallitut_instrumentit": ["OMXH_osakkeet", "First_North_osakkeet"],
+    "kielletyt_instrumentit": ["ETF", "indeksirahastot", "joukkovelkakirjat"],
+    "talletusraja_eur": 100_000,
+    "veron_lykkays": True,  # Vero realisoituu vasta nostohetkellä, ei myyntihetkellä
+    "huomio": "Rahastoagentti ja ETF-analyysit eivät koske OST-käyttäjiä"
+}
+# Salkunhoitaja-agentti EI SAA suositella ETF:iä tai rahastoja
+# OST-profiiliselle käyttäjälle — se olisi faktisesti väärä neuvo.
+
 ### Käyttöliittymä
 - Termit: "Osta" / "Pidä" / "Myy" (ei Buy/Hold/Sell)
 - Euromääräiset summat (€, ei $)
@@ -655,17 +716,38 @@ kauppa-agentit/
 - [x] Varmista upstream toimii: Nokia-analyysi tuotti SELL-päätöksen @ €6.87 (2026-03-24)
 - [ ] Docker Compose -ympäristö pystyyn (PostgreSQL + Redis + app)
 
+### Vaihe 1.5: AI Act & Compliance-valmistelu (PAKOLLINEN ennen julkaisua)
+- [ ] Selvitä onko KauppaAgentit EU:n AI Actin "korkean riskin
+  AI-järjestelmä" — Finanssivalvonta on nimetty valvontaviranomaiseksi
+  rahoitussektorin AI-järjestelmille (2026).
+- [ ] Lisää `docs/regulaatio.md`:ään erillinen AI Act -osio.
+- [ ] Varmista, että jokainen ulos lähtevä raportti sisältää
+  koneluettavan disclaimerin (ei vain ihmisluettavan).
+- [ ] Luo `compliance_log`-taulu PostgreSQL:ään (audit trail kaikista
+  raporteista: timestamp, käytetyt mallit, konfiguraatio, hash).
+- [ ] Toteuta `COMPLIANCE_MODE`-ympäristömuuttuja (`finnish_config.py`):
+  kun päällä, "OSTA/PIDÄ/MYY" → "Positiivinen / Neutraali / Negatiivinen näkymä".
+
 ### Vaihe 2: OMXH-data + suomalaiset lähteet
 - [x] Lisää omxh_utils.py Helsingin pörssin datalle (.HE-suffiksi, OMXH_TICKERS-kartta)
 - [x] Sentimenttiagentille Kauppalehti/Inderes -datasyöte — get_finnish_news lisätty social_media_analyst.py:hyn, Yahoo Finance fallback
 - [x] Uutisagentille suomalaiset uutislähteet — Kauppalehti + YLE Talous RSS (finnish_news.py), ECB/Nordic-hakutermit, yhdistetty get_all_stock_news_combined (1 tool call vs 3), LRU-välimuisti RSS-hauille, OMXH_KEYWORDS-kartta yhtiökohtaisille termeille
 - [ ] Testaa Nokia, Nordea, Neste, UPM, KONE -osakkeilla — Nokia testattu ✓
 
+
 ### Vaihe 2.5: Laatu- ja regressiotestit analyysille
-- [ ] Luo `tests/test_backtests/` — aja sama ticker (esim. NOKIA) 3× peräkkäin, tarkista että päätös (OSTA/PIDÄ/MYY) pysyy johdonmukaisena (LLM-lämpötila 0 tai matala)
-- [ ] Seuraa luottamusväliä: kirjaa jokaisen ajon `judge_decision`-vastaus JSON-tiedostoon ja laske kuinka usein päätös muuttuu
-- [ ] Luo `tests/fixtures/golden_baselines/` — ei tarkoita identtisiä vastauksia, vaan että päätössuunta (positiivinen/negatiivinen) pysyy oikeana tunnetuille historiadatapointeille
-- [ ] Lisää `pytest`-testi joka hälyttää jos päätös vaihtuu yli 50 % ajoista samalla syötedatalla (hallusinaatiovaroitus)
+- [ ] Luo `tests/test_backtests/` -hakemisto.
+- [ ] Kirjoita testit jotka ajavat saman tickerin (NOKIA, NESTE, NORDEA,
+  KONE) analyysin useaan kertaan eri parametreilla ja tarkistavat
+  päätöksen stabiliteetin (ei hypi OSTA↔MYY ilman selkeää syytä).
+- [ ] Luo "golden baseline" -fixturet:
+  `tests/fixtures/baseline_<ticker>_<pvm>.json`
+  — käytetään regressiotesteissä jokaisen iso prompti/mallipäivityksen
+  jälkeen.
+- [ ] Testaa automaattisesti myös suomen kielen laatu: varmista että
+  agentit eivät vastaa englanniksi mallipäivitysten jälkeen.
+- [ ] Valvo agenttiraporttien token-pituutta; aseta ylärajat
+  liiallisen API-kulutuksen välttämiseksi.
 
 ### Vaihe 3: Telegram-botti (nopein tie käyttäjiin)
 - [x] python-telegram-bot -pohjainen botti (telegram_bot/ -paketti)
@@ -674,12 +756,38 @@ kauppa-agentit/
 - [x] Whitelist-pohjainen pääsynhallinta (TELEGRAM_WHITELIST env var)
 - [ ] Suomalaiset sijoitus-Telegram-ryhmät markkinointikanavana
 
+### Vaihe 3.5: Explainable AI -perustelut (kriittinen käyttäjäluottamukselle)
+HUOM: Tämä on siirretty aiemmaksi kuin alun perin suunniteltu —
+suomalainen käyttäjä ei luota pelkkään "OSTA"-vastaukseen.
+- [ ] Pakota jokainen agentti erittelemään vastauksensa loppuun
+  rakenteinen "Perustelut"-osio:
+  * Fundamenttiagentti: Top 3 fundamenttisignaalia
+  * Sentimentti+uutisagentti: Top 3 positiivista ja Top 3 negatiivista
+  * Bull/bear-tutkijat: Väittelyn pääargumentti tiivistetysti
+- [ ] Telegram-bottiin: lisää analyysin loppuun "📋 Näytä perustelut"
+  -inline-nappi (callback query) joka lähettää erillisen viestin.
+- [ ] Web-UI:hin: collapsible "Näytä tarkat perustelut" -paneeli,
+  oletuksena suljettu.
+
 ### Vaihe 4: Web-dashboard + käyttäjätilit
 - [ ] React-dashboard + FastAPI-backend + WebSocket
 - [ ] Käyttäjärekisteröinti (email tai Suomi.fi-tunnistautuminen)
 - [ ] Agenttien etenemisen reaaliaikaseuranta
 - [ ] Analyysien historia ja vertailu
 - [ ] Vastuuvapautus-komponentti (pakollinen joka näkymässä)
+
+### Vaihe 4.5: Onboarding-flow ja riskiprofilointi
+- [ ] Rakenna Web-UI:hin kevyt onboarding-wizard (max 2 kysymystä
+  ensimmäisellä kirjautumisella, loput profiilisivulla myöhemmin):
+  * Kokemus: "Aloittelija / Kokenut sijoittaja"
+  * Riskinsieto: "Matala / Keskitaso / Korkea"
+- [ ] Pakota Finanssivalvonta/MiFID II -yhteensopiva vastuuvapautusteksti
+  ennen ENSIMMÄISTÄ analyysiä — ei vain kerran rekisteröinnissä.
+- [ ] Tallenna `kayttajat`-tauluun: `kokemus_taso`, `riski_profiili`,
+  `disclaimer_hyvaksytty_at`, `tili_tyyppi` (OST/AOT/rahastot).
+- [ ] `portfolio_mgr`-agentti lukee nämä parametrit ja muotoilee
+  analyysin sävyn sen mukaisesti (aloittelijalle korostetaan
+  hajautusta, ei mene henkilökohtaiseen neuvontaan).
 
 ### Vaihe 5: Credit-järjestelmä + Stripe-maksaminen
 - [ ] Credit-saldot ja kulutusseuranta
@@ -694,16 +802,50 @@ kauppa-agentit/
 - [ ] Hälytykset: Telegram, email, push
 - [ ] Suomalainen verolaskuri: pääomaveroesimerkit myyntitilanteessa
 
+### Vaihe 6.5: Veroskenaario-simulaattori (Suomen tärkein differentiator)
+- [ ] Laajenna `integrations/vero/paaomavero.py` skenaarioihin:
+  * "Myy nyt" vs "Myy 6kk päästä" eri kurssioletuksilla
+  * Todellinen hankintahinta vs. hankintameno-olettama
+    (20% jos omistettu < 10v, 40% jos ≥ 10v)
+  * OST vs. AOT: verovaikutuksen ero konkreettisilla luvuilla
+- [ ] Web-UI:hin erillinen "Verosimulaattori"-näkymä, joka käyttää
+  portfolion dataa ja näyttää taulukossa:
+  myyntihinta | luovutusvoitto | arvioitu vero | netto
+- [ ] Salkunhoitaja-agentti lisää automaattisesti "💰 Verohuomio"-osion
+  jos käyttäjällä on kyseistä osaketta salkussa voitollisena.
+- [ ] Telegram-komento: `/vero NOKIA 200 3.80` laskee veroskenaarion
+  suoraan chatissa.
+
 ### Vaihe 7: Backtesting + uskottavuus
 - [ ] "Miltä agenttien suositukset olisivat näyttäneet viimeisen vuoden aikana?"
 - [ ] Historiallinen trackrecord -näkymä
 - [ ] Vertailu OMXH-indeksiin ja Inderesin suosituksiin
+
+### Vaihe 7.5: "Viikon OMXH-signaali" -automaatio
+- [ ] Luo viikoittainen cron-job (maanantai klo 08:00 EET) joka:
+  * Skannaa OMXH TOP 25 osakkeen sentimenttimuutokset
+  * Nostaa yhden mielenkiintoisimman signaalin
+  * Lähettää automaattisesti julkiselle Telegram-kanavalle
+- [ ] Formaatti: lyhyt, napakka suomeksi — ei täyttä analyysiä,
+  vain signaali + linkki "Lue täysi analyysi KauppaAgenteilla"
+- [ ] Tämä toimii orgaanisena markkinointikanavana ja pitää
+  käyttäjät sitoutuneina vaikka eivät itse aloita analyysejä.
 
 ### Vaihe 8: B2B White-label
 - [ ] API-pohjainen versio joka integroituu pankkien/varainhoitajien järjestelmiin
 - [ ] Brändättävä dashboard
 - [ ] SLA ja enterprise-tuki
 - [ ] Yhteydenotto: Nordea, OP, Evli, Mandatum
+
+### Vaihe 8.5: Jaettavat raportit & orgaaninen kasvu
+- [ ] Lisää backend-endpoint `GET /api/jaa/<analyysi_id>` joka generoi
+  anonyymin, jaettavan URL:n (ei sisällä käyttäjän tunnistetietoja).
+- [ ] Jaettavassa raportissa CTA-teksti:
+  "Analyysi tuotettu KauppaAgentit-työkalulla — kokeile ilmaiseksi: <url>"
+- [ ] Telegram-bottiin komento `/jaa` joka lähettää jaettavan linkin
+  viimeisimmästä analyysistä.
+- [ ] Luo `jaetut_raportit`-taulu DB:hen (analyysi_id, token, luotu,
+  katselukerrat) — seuraa orgaanista leviämistä.
 
 ## Kaupallistamisstrategia
 
