@@ -122,15 +122,10 @@ def get_finnish_config(overrides: dict = None) -> dict:
 
 def resolve_omxh_ticker(ticker: str) -> str:
     """
-    Muuntaa suomalaisen osakkeen tunnuksen Yahoo Finance -muotoon.
-    Esim. 'NOKIA' → 'NOKIA.HE', 'NOKIA.HE' → 'NOKIA.HE'
+    Muuntaa osakkeen tunnuksen Yahoo Finance -muotoon.
+    Tukee OMXH (.HE), OMXS (.ST) ja muita pohjoismaisia pörssejä.
+    Esim. 'NOKIA' → 'NOKIA.HE', 'SKA B' → 'SKA-B.ST', 'SKA-B.ST' → 'SKA-B.ST'
     """
-    ticker = ticker.upper().strip()
-    if ticker.endswith(".HE"):
-        return ticker
-    # Tarkista tunnetut aliakset
-    known = FINNISH_CONFIG["default_tickers"]
-    if ticker in known:
-        return known[ticker]
-    # Oletus: lisää .HE-suffiksi
-    return f"{ticker}.HE"
+    # FORK: Delegoidaan omxh_utils.resolve_ticker:lle joka osaa kaikki suffiksit ja aliakset
+    from tradingagents.dataflows.omxh_utils import resolve_ticker
+    return resolve_ticker(ticker)

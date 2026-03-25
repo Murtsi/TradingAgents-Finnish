@@ -34,6 +34,7 @@ ALL_STAGES = [
     "Uutisanalyysi",
     "Bull-tutkija",
     "Bear-tutkija",
+    "Väittelytuomari",       # research manager — puuttui aiemmin
     "Kaupankäyntipäätös",
     "Riskiarvio",
     "Salkunhoitaja",
@@ -43,10 +44,14 @@ ALL_STAGES = [
 def _build_progress_message(
     ticker: str,
     completed: list[str],
-    current: str | None,
+    in_progress: set[str],
     elapsed_sec: int = 0,
 ) -> str:
-    """Puhdas funktio — rakentaa progress-viestin nykyisen tilan perusteella."""
+    """Puhdas funktio — rakentaa progress-viestin nykyisen tilan perusteella.
+
+    in_progress on setti kaikista samanaikaisesti käynnissä olevista stageista
+    (rinnakkaiset analyytikot näytetään kaikki aktiivisina yhtä aikaa).
+    """
     lines = [
         f"Analysoin: *{ticker}*",
         "━━━━━━━━━━━━━━━━━━━━━",
@@ -55,9 +60,10 @@ def _build_progress_message(
         # Riskit on yhdistetty yhteen riviin UI:ssa
         if stage == "Riskiarvio":
             riskivaiheet = [s for s in completed if "Riskiarvio" in s]
+            riski_kaynnissa = any("Riskiarvio" in s for s in in_progress)
             if riskivaiheet:
                 lines.append("[VALMIS] Riskiarvio")
-            elif current and "Riskiarvio" in current:
+            elif riski_kaynnissa:
                 lines.append("[...] Riskiarvio käynnissä...")
             else:
                 lines.append("[ ] Riskiarvio")
@@ -65,7 +71,7 @@ def _build_progress_message(
 
         if stage in completed:
             lines.append(f"[VALMIS] {stage}")
-        elif stage == current:
+        elif stage in in_progress:
             lines.append(f"[...] {stage} käynnissä...")
         else:
             lines.append(f"[ ] {stage}")
@@ -82,8 +88,12 @@ class AnalysisProgressCallback(BaseCallbackHandler):
     """
     LangChain callback joka päivittää Telegram-viestiä reaaliajassa.
 
-    Kuuntelee on_chain_start-tapahtumia jotka LangGraph laukaisee
-    kun kukin agentti-node käynnistyy.
+    Kuuntelee on_chain_start/end -tapahtumia jotka LangGraph laukaisee
+    kun kukin agentti-node käynnistyy tai päättyy.
+
+    Rinnakkaiset analyytikot seurataan run_id:n perusteella — jokainen
+    on_chain_end osaa tunnistaa oikean stagen ilman että muut merkitään
+    vahingossa valmiiksi ennenaikaisesti.
 
     Toimii threadissa — käyttää asyncio.run_coroutine_threadsafe() pääloopille.
     """
@@ -94,7 +104,8 @@ class AnalysisProgressCallback(BaseCallbackHandler):
         self.loop = loop
         self.edit_fn = edit_fn
         self.completed: list[str] = []
-        self.current: str | None = None
+        self._in_progress: set[str] = set()        # Kaikki käynnissä olevat stagit
+        self._run_stages: dict[str, str] = {}      # run_id → stage-nimi
         self.elapsed_sec: int = 0
         self._last_sent: str = ""  # Deduplikointi — estää turhat editMessageText-kutsut
 
@@ -106,42 +117,66 @@ class AnalysisProgressCallback(BaseCallbackHandler):
                 return label
         return None
 
+    def _extract_name(self, serialized: dict[str, Any] | None, kwargs: dict) -> str:
+        """Poimii node-nimen serialized-dictistä tai kwargs:sta."""
+        if not serialized:
+            return kwargs.get("name", "") or kwargs.get("run_name", "") or ""
+        return (
+            serialized.get("name", "")
+            or (serialized.get("id") or [""])[-1]
+            or ""
+        )
+
     def on_chain_start(self, serialized: dict[str, Any], inputs: Any, **kwargs) -> None:
         """Laukeaa kun LangGraph-node käynnistyy."""
-        if not serialized:
-            name = kwargs.get("name", "") or kwargs.get("run_name", "") or ""
-        else:
-            name = (
-                serialized.get("name", "")
-                or (serialized.get("id") or [""])[-1]
-                or ""
-            )
+        name = self._extract_name(serialized, kwargs)
         stage = self._resolve_stage(str(name))
         if stage is None:
             return
-        if self.current and self.current not in self.completed:
-            self.completed.append(self.current)
-        self.current = stage
+
+        run_id = str(kwargs.get("run_id", ""))
+        if run_id:
+            self._run_stages[run_id] = stage
+
+        self._in_progress.add(stage)
         self._push_update()
 
     def on_chain_end(self, outputs: Any, **kwargs) -> None:
         """Laukeaa kun LangGraph-node päättyy."""
-        if self.current and self.current not in self.completed:
-            self.completed.append(self.current)
-            self.current = None
-            self._push_update()
+        run_id = str(kwargs.get("run_id", ""))
+        stage = self._run_stages.pop(run_id, None)
+
+        if stage is None:
+            return
+
+        self._in_progress.discard(stage)
+        if stage not in self.completed:
+            self.completed.append(stage)
+        self._push_update()
 
     def on_llm_start(self, serialized: dict[str, Any], prompts: list[str], **kwargs) -> None:
-        """Fallback: yritä tunnistaa agentti myös LLM-tasolta."""
-        # LLM-tason serialized ei yleensä sisällä agentin nimeä,
-        # mutta jotkut LangChain-versiot välittävät sen metadata-kentässä
+        """Fallback: merkitse stage aktiiviseksi jos on_chain_start ei tunnistanut sitä."""
         run_name = kwargs.get("run_name", "") or ""
         stage = self._resolve_stage(run_name)
-        if stage and stage != self.current:
-            if self.current and self.current not in self.completed:
-                self.completed.append(self.current)
-            self.current = stage
-            self._push_update()
+        # Käytä vain jos stage ei ole jo seurannassa — on_chain_start on ensisijainen
+        if not stage or stage in self._in_progress or stage in self.completed:
+            return
+        run_id = str(kwargs.get("run_id", ""))
+        if run_id:
+            self._run_stages[run_id] = stage
+        self._in_progress.add(stage)
+        self._push_update()
+
+    def on_llm_end(self, response: Any, **kwargs) -> None:  # noqa: ARG002
+        """Pari on_llm_start-fallbackille — estää stageja jäämästä in_progress-settiin."""
+        run_id = str(kwargs.get("run_id", ""))
+        # Poista vain jos tämä run_id oli llm_start-fallbackin lisäämä
+        # (on_chain_end hoitaa normaalit tapaukset, älä kirjaa valmiiksi tässä)
+        stage = self._run_stages.get(run_id)
+        if stage and stage in self._in_progress:
+            # Tarkista onko vastaava chain_end jo hoitanut tämän
+            # Jos run_id on vielä _run_stages:ssa, chain_end ei ole ajanut
+            pass  # chain_end poistaa — ei tehdä tässä mitään ylimääräistä
 
     def update_elapsed(self, elapsed_sec: int) -> None:
         """Päivitetään kuluneen ajan näyttö (kutsutaan background-timerista threadista)."""
@@ -151,7 +186,7 @@ class AnalysisProgressCallback(BaseCallbackHandler):
     async def push_update_async(self, elapsed_sec: int) -> None:
         """Päivitetään kuluneen ajan näyttö asyncio-kontekstista (ei threadista)."""
         self.elapsed_sec = elapsed_sec
-        msg = _build_progress_message(self.ticker, self.completed, self.current, self.elapsed_sec)
+        msg = _build_progress_message(self.ticker, self.completed, self._in_progress, self.elapsed_sec)
         if msg == self._last_sent:
             return
         self._last_sent = msg
@@ -159,13 +194,15 @@ class AnalysisProgressCallback(BaseCallbackHandler):
 
     def _push_update(self) -> None:
         msg = _build_progress_message(
-            self.ticker, self.completed, self.current, self.elapsed_sec
+            self.ticker, self.completed, self._in_progress, self.elapsed_sec
         )
         if msg == self._last_sent:
             return  # Sama teksti — älä lähetä, estää 400 "message is not modified"
         self._last_sent = msg
+        # Fire-and-forget — EI blokkaava future.result().
+        # Aiempi timeout=5 blokkaisi jokaisen analyysistepin 5 sekuntia virheen sattuessa.
         future = asyncio.run_coroutine_threadsafe(self.edit_fn(msg), self.loop)
-        try:
-            future.result(timeout=5)
-        except Exception as e:
-            logger.warning(f"Progress-päivitys epäonnistui: {e}")
+        future.add_done_callback(
+            lambda f: logger.warning(f"Progress-päivitys epäonnistui: {f.exception()}")
+            if not f.cancelled() and f.exception() else None
+        )

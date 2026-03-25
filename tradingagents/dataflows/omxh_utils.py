@@ -14,6 +14,23 @@ import pandas as pd
 from datetime import datetime, timedelta
 from typing import Optional
 
+# Tunnetut pörssisuffiksit — nämä läpäistään sellaisenaan ilman .HE-lisäystä
+# FORK: Pohjoismaiset pörssit + yleiset Yahoo Finance -suffiksit
+KNOWN_EXCHANGE_SUFFIXES: frozenset[str] = frozenset({
+    ".HE",   # Helsinki (OMXH)
+    ".ST",   # Stockholm (OMXS)
+    ".OL",   # Oslo (OSLO)
+    ".CO",   # Kööpenhamina (OMXC)
+    ".IC",   # Reykjavik
+    ".L",    # Lontoo
+    ".PA",   # Pariisi
+    ".F",    # Frankfurt
+    ".TO",   # Toronto
+    ".AX",   # Australia
+    ".SS",   # Shanghai
+    ".HK",   # Hongkong
+})
+
 # Tunnetut OMXH-osakkeet ja niiden Yahoo Finance -tunnukset
 OMXH_TICKERS: dict[str, str] = {
     # Suuryhtiöt (Large Cap)
@@ -42,6 +59,20 @@ OMXH_TICKERS: dict[str, str] = {
     "REVENIO": "REG1V.HE",
     "HARVIA": "HARVIA.HE",
     "EFECTE": "EFECTE.HE",
+    # Ruotsalaiset yhtiöt (OMXS) — yleisesti haetut Suomesta
+    "SKANSKA": "SKA-B.ST",
+    "SKA B": "SKA-B.ST",
+    "SKA-B": "SKA-B.ST",
+    "VOLVO": "VOLV-B.ST",
+    "VOLVO B": "VOLV-B.ST",
+    "VOLV-B": "VOLV-B.ST",
+    "ATLAS COPCO": "ATCO-B.ST",
+    "ATCO B": "ATCO-B.ST",
+    "INVESTOR": "INVE-B.ST",
+    "INVE B": "INVE-B.ST",
+    "H&M": "HM-B.ST",
+    "HM B": "HM-B.ST",
+    "HENNES": "HM-B.ST",
 }
 
 # Virallinen yritysnimi per Yahoo Finance -tunnus (estää uutisagenttia nimeämästä väärän yhtiön)
@@ -84,6 +115,12 @@ OMXH_COMPANY_NAMES: dict[str, str] = {
     "REKA.HE":    "Reka Industrial Oyj",
     "GOFORE.HE":  "Gofore Oyj",
     "SOLTEQ.HE":  "Solteq Oyj",
+    # Ruotsalaiset yhtiöt
+    "SKA-B.ST":   "Skanska AB",
+    "VOLV-B.ST":  "Volvo AB",
+    "ATCO-B.ST":  "Atlas Copco AB",
+    "INVE-B.ST":  "Investor AB",
+    "HM-B.ST":    "H&M Hennes & Mauritz AB",
 }
 
 # Kaupankäyntiajat (EET/EEST)
@@ -103,18 +140,18 @@ def resolve_ticker(ticker: str) -> str:
     """
     ticker_upper = ticker.upper().strip()
 
-    # Jo oikeassa muodossa
-    if ticker_upper.endswith(".HE"):
+    # Jo validissa muodossa — tunnettu pörssisuffiksi, palautetaan sellaisenaan
+    if any(ticker_upper.endswith(s) for s in KNOWN_EXCHANGE_SUFFIXES):
         return ticker_upper
 
-    # Tarkista alias-lista (tukee myös välilyönnilliset nimet kuten "STORA ENSO")
+    # Tarkista alias-lista (tukee myös välilyönnilliset nimet kuten "STORA ENSO", "SKA B")
     if ticker_upper in OMXH_TICKERS:
         resolved = OMXH_TICKERS[ticker_upper]
         if resolved is None:
             raise ValueError(f"Osake '{ticker}' ei ole pörssinoteerattu.")
         return resolved
 
-    # Kokeile välilyönti→viiva-muunnos (esim. "NDA FI" → "NDA-FI.HE")
+    # Kokeile välilyönti→viiva-muunnos (esim. "NDA FI" → "NDA-FI.HE", "SKA B" → "SKA-B" tarkistetaan ensin)
     dashed = ticker_upper.replace(" ", "-")
     if dashed != ticker_upper:
         if dashed in OMXH_TICKERS:
@@ -122,6 +159,7 @@ def resolve_ticker(ticker: str) -> str:
             if resolved is None:
                 raise ValueError(f"Osake '{ticker}' ei ole pörssinoteerattu.")
             return resolved
+        # Tarkista onko viiva-muoto jo validi suffiksi (esim. "SKA-B.ST" käyttäjältä ilman suffiksia)
         return f"{dashed}.HE"
 
     # Oletus: lisää .HE-suffiksi

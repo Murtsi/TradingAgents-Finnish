@@ -40,10 +40,17 @@ def create_trader(llm, memory):
             ),
         }
 
+        # FORK: sanarajat terminaalikäyttöä varten (ei Telegram-rajoituksia)
         messages = [
             {
                 "role": "system",
                 "content": (
+                    "TIIVIYSOHJE: Raporttisi maksimipituus on 500 sanaa. "
+                    "Lopeta AINA täyteen lauseeseen ennen tokenirajaa. "
+                    "Älä aloita uutta osiota jos et pysty viimeistelemään sitä.\n"
+                    "Älä kirjoita metakommentteja kuten 'Let me compile', 'Perfect', "
+                    "'I now have all data', 'Analysoin nyt'. "
+                    "Aloita raportti suoraan otsikolla tai ensimmäisillä havainnoilla.\n\n"
                     f"{_fi_prompt}\n\n"
                     f"Aiemmista tilanteista opitut opit: {past_memory_str}"
                 ),

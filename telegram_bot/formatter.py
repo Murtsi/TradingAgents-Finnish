@@ -236,7 +236,8 @@ def format_full_report(state: dict) -> str:
 
 
 # Max merkkejä per osio — pitää yksittäisen viestin Telegramin 4096 rajan alla
-_SECTION_MAX = 3600
+# Otsikko + ━━━ -rivi vie ~80 merkkiä → jätetään 3900 merkkiä sisällölle (4096 - 196 turvamarginaali)
+_SECTION_MAX = 3900
 
 
 def format_full_report_parts(state: dict) -> list[str]:
@@ -268,8 +269,6 @@ def format_full_report_parts(state: dict) -> list[str]:
             return "—"
         cleaned = _strip_openers(raw)
         text = _strip_markdown(cleaned).strip()
-        if _is_llm_truncated(text):
-            text = text + "\n[RAPORTTI KATKAISTUI — max_tokens-raja saavutettu]"
         return _truncate(text, _SECTION_MAX)
 
     trader = state.get("trader_investment_decision") or state.get("trader_investment_plan", "")

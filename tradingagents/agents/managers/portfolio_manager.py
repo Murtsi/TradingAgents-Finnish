@@ -24,8 +24,12 @@ def create_portfolio_manager(llm, memory):
             past_memory_str += rec["recommendation"] + "\n\n"
 
         # FORK: Suomi-lokalisointi — Finnish system prompt + data
+        # FORK: sanarajat terminaalikäyttöä varten (ei Telegram-rajoituksia)
         _fi_prompt = load_fi_prompt("portfolio_manager_system")
-        prompt = f"""{_fi_prompt}
+        prompt = f"""TIIVIYSOHJE: Raporttisi maksimipituus on 600 sanaa. Lopeta AINA täyteen lauseeseen ennen tokenirajaa. Älä aloita uutta osiota jos et pysty viimeistelemään sitä.
+Älä kirjoita metakommentteja kuten 'Let me compile', 'Perfect', 'I now have all data', 'Analysoin nyt'. Aloita raportti suoraan otsikolla tai ensimmäisillä havainnoilla.
+
+{_fi_prompt}
 
 {instrument_context}
 **Analyysipäivämäärä:** {current_date} — käytä tätä päivämäärää raportissa, älä hallusinoi muuta päivämäärää.

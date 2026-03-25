@@ -22,9 +22,16 @@ def create_market_analyst(llm):
         ]
 
         # FORK: Suomi-lokalisointi — Finnish context prepended, indicator list kept for tool-calling
+        # FORK: sanarajat terminaalikäyttöä varten (ei Telegram-rajoituksia)
         _fi_context = load_fi_prompt("technical_system")
         system_message = (
-            _fi_context + "\n\n" +
+            "TIIVIYSOHJE: Raporttisi maksimipituus on 800 sanaa. "
+            "Lopeta AINA täyteen lauseeseen ennen tokenirajaa. "
+            "Älä aloita uutta osiota jos et pysty viimeistelemään sitä.\n"
+            "Älä kirjoita metakommentteja kuten 'Let me compile', 'Perfect', "
+            "'I now have all data', 'Analysoin nyt'. "
+            "Aloita raportti suoraan otsikolla tai ensimmäisillä havainnoilla.\n\n"
+            + _fi_context + "\n\n" +
             """You are a trading assistant tasked with analyzing financial markets. Your role is to select the **most relevant indicators** for a given market condition or trading strategy from the following list. The goal is to choose up to **8 indicators** that provide complementary insights without redundancy. Categories and each category's indicators are:
 
 Moving Averages:

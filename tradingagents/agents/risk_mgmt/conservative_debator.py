@@ -1,6 +1,7 @@
 from langchain_core.messages import AIMessage
 import time
 import json
+from tradingagents.agents.utils.agent_utils import build_instrument_context  # FORK: instrument context — estää väärän yhtiön tunnistuksen
 from tradingagents.agents.utils.prompt_loader import load_fi_prompt  # FORK: Suomi-lokalisointi
 
 
@@ -20,9 +21,18 @@ def create_conservative_debator(llm):
 
         trader_decision = state["trader_investment_plan"]
 
+        # FORK: instrument context — estää väärän yhtiön tunnistuksen
+        instrument_context = build_instrument_context(state["company_of_interest"])
+
         # FORK: Suomi-lokalisointi — konservatiivinen riskianalyytikko, korostaa riskejä
+        # FORK: sanarajat terminaalikäyttöä varten (ei Telegram-rajoituksia)
         _fi_prompt = load_fi_prompt("risk_system")
-        prompt = f"""{_fi_prompt}
+        prompt = f"""TIIVIYSOHJE: Raporttisi maksimipituus on 400 sanaa. Lopeta AINA täyteen lauseeseen ennen tokenirajaa. Älä aloita uutta osiota jos et pysty viimeistelemään sitä.
+Älä kirjoita metakommentteja kuten 'Let me compile', 'Perfect', 'I now have all data', 'Analysoin nyt'. Aloita raportti suoraan otsikolla tai ensimmäisillä havainnoilla.
+
+{_fi_prompt}
+
+{instrument_context}
 
 ## Roolisi: Konservatiivinen riskianalyytikko
 Tehtäväsi on suojata varallisuutta ja minimoida volatiliteetti. Haasta aggressiivisen ja neutraalin analyytikon argumentit varovaisuuden näkökulmasta. Vastaa suomeksi.

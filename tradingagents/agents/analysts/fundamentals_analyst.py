@@ -27,7 +27,14 @@ def create_fundamentals_analyst(llm):
         ]
 
         # FORK: Suomi-lokalisointi — ladataan Finnish system prompt fi_prompts/-kansiosta
+        # FORK: sanarajat terminaalikäyttöä varten (ei Telegram-rajoituksia)
         system_message = (
+            "TIIVIYSOHJE: Raporttisi maksimipituus on 900 sanaa. "
+            "Lopeta AINA täyteen lauseeseen ennen tokenirajaa. "
+            "Älä aloita uutta osiota jos et pysty viimeistelemään sitä.\n"
+            "Älä kirjoita metakommentteja kuten 'Let me compile', 'Perfect', "
+            "'I now have all data', 'Analysoin nyt'. "
+            "Aloita raportti suoraan otsikolla tai ensimmäisillä havainnoilla.\n\n"
             "KRIITTINEN OHJE: Kirjoita KAIKKI analyysit ja raportit AINA suomeksi. "
             "Aloita analyysi välittömästi ilman johdantolauseita kuten 'Kiitos!' tai 'Hyvä!'.\n\n"
             + load_fi_prompt("fundamentals_system")

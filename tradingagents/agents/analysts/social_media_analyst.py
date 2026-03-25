@@ -18,7 +18,14 @@ def create_social_media_analyst(llm):
         ]
 
         # FORK: Suomi-lokalisointi — Finnish system prompt + tool calling instructions
+        # FORK: sanarajat terminaalikäyttöä varten (ei Telegram-rajoituksia)
         system_message = (
+            "TIIVIYSOHJE: Raporttisi maksimipituus on 600 sanaa. "
+            "Lopeta AINA täyteen lauseeseen ennen tokenirajaa. "
+            "Älä aloita uutta osiota jos et pysty viimeistelemään sitä.\n"
+            "Älä kirjoita metakommentteja kuten 'Let me compile', 'Perfect', "
+            "'I now have all data', 'Analysoin nyt'. "
+            "Aloita raportti suoraan otsikolla tai ensimmäisillä havainnoilla.\n\n"
             "KRIITTINEN OHJE: Kirjoita KAIKKI analyysit ja raportit AINA suomeksi. "
             "Älä koskaan kirjoita englanniksi. Aloita analyysi välittömästi ilman johdantolauseita.\n\n"
             + load_fi_prompt("sentiment_system")
