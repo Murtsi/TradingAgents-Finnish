@@ -102,17 +102,31 @@ def _strip_openers(text: str) -> str:
 
 def _is_llm_truncated(text: str) -> bool:
     """
-    Tunnistaa onko LLM-vastaus katkaistiu max_tokens-rajan takia.
-    Merkki: ei pääty lauseen loppumerkkiin eikä display-katkaisijan '…' merkkiin.
+    Tunnistaa onko LLM-vastaus katkaisttu max_tokens-rajan takia.
+    Tarkistaa viimeisen ei-tyhjän rivin — taulukkorivit, listaalkiot ja
+    otsikot hyväksytään päättyneiksi vaikka niissä ei ole loppupistettä.
     """
     if not text:
         return False
-    tail = text.rstrip()[-80:]  # Tarkista viimeiset 80 merkkiä
-    # Jos loppuu jo '…' niin on jo merkitty katkaistuksi
-    if tail.endswith("…"):
+    lines = [ln for ln in text.rstrip().splitlines() if ln.strip()]
+    if not lines:
         return False
-    # Lause päättyy oikein jos viimeinen merkitty kohta on .  !  ?  tai )  tai "
-    return not bool(re.search(r"[.!?)\"][\s]*$", tail))
+    last = lines[-1].rstrip()
+    if last.endswith("…"):
+        return False
+    # Lause päättyy oikein: .  !  ?  )  "
+    if re.search(r"[.!?)\"][\s]*$", last):
+        return False
+    # Taulukkorivin loppu tai alku
+    if last.endswith("|") or last.startswith("|"):
+        return False
+    # Bullet-kohta tai numeroitu lista
+    if re.match(r"^[-*•]\s+", last) or re.match(r"^\d+\.\s+", last):
+        return False
+    # Erotinrivi (---  tai ━━━)
+    if re.match(r"^[─━\-]{3,}$", last):
+        return False
+    return True
 
 
 def _truncate(text: str, max_chars: int) -> str:

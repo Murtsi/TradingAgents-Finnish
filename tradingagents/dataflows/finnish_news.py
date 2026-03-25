@@ -87,6 +87,11 @@ OMXH_KEYWORDS: dict[str, list[str]] = {
     "TIETO.HE":   ["TietoEVRY", "Tieto"],
     "ELISA.HE":   ["Elisa", "Elisa Oyj"],
     "HUH1V.HE":   ["Huhtamäki", "Huhtamaki"],
+    "FIA1S.HE":   ["Finnair", "Finnair Oyj"],
+    "OMASP.HE":   ["Oma Säästöpankki", "OmaSp"],
+    "KOJAMO.HE":  ["Kojamo", "Lumo"],
+    "VALMT.HE":   ["Valmet"],
+    "OUT1V.HE":   ["Outokumpu"],
 }
 
 # Yleiset suomalaiset markkinaavainsanat (aina mukana kotimaisissa syötteissä)

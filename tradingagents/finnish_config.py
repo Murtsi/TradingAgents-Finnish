@@ -28,7 +28,7 @@ FINNISH_CONFIG = {
     # Rajoittaa jokaisen agentin vastauspituuden.
     # 4096 antaa salkunhoitajalle ja tutkijoille tilaa kirjoittaa täydellinen raportti.
     # TEST_MODE ylikirjoittaa tämän arvolla 500.
-    "max_tokens": 8000,
+    "max_tokens": 8192,  # Claude Haiku max output tokens
 
     # ── Datalähteet ────────────────────────────────────────────────
     "online_tools": True,

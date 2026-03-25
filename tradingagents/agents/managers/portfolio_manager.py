@@ -6,6 +6,7 @@ def create_portfolio_manager(llm, memory):
     def portfolio_manager_node(state) -> dict:
 
         instrument_context = build_instrument_context(state["company_of_interest"])
+        current_date = state.get("trade_date", "")
 
         history = state["risk_debate_state"]["history"]
         risk_debate_state = state["risk_debate_state"]
@@ -27,6 +28,7 @@ def create_portfolio_manager(llm, memory):
         prompt = f"""{_fi_prompt}
 
 {instrument_context}
+**Analyysipäivämäärä:** {current_date} — käytä tätä päivämäärää raportissa, älä hallusinoi muuta päivämäärää.
 
 ---
 
