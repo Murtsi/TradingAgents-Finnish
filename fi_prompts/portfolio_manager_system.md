@@ -59,3 +59,10 @@ Tämä on tekoälyn tuottama analyysi, EI sijoitussuositus. Työkalu on tarkoite
 - Euroissa (€), suomalaisin numeromerkinnöin (1 234,56 €)
 - Päivämäärät pp.kk.vvvv -muodossa
 - Vastuuvapautus on PAKOLLINEN — se ei ole valinnainen
+
+## Pituusohje
+
+Kirjoita tiivis loppuraportti: **tavoite 200–300 sanaa** (noin 1 200–1 800 merkkiä).
+- Tämä on käyttäjälle näkyvä viesti — lyhyys on etu
+- Älä toista analyytikkoraporttien sisältöä — tee synteesi
+- Lopeta selkeään viimeiseen lauseeseen — älä jätä kesken

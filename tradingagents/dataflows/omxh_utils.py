@@ -44,6 +44,48 @@ OMXH_TICKERS: dict[str, str] = {
     "EFECTE": "EFECTE.HE",
 }
 
+# Virallinen yritysnimi per Yahoo Finance -tunnus (estää uutisagenttia nimeämästä väärän yhtiön)
+OMXH_COMPANY_NAMES: dict[str, str] = {
+    "NOKIA.HE":   "Nokia Oyj",
+    "NDA-FI.HE":  "Nordea Bank Abp",
+    "NESTE.HE":   "Neste Oyj",
+    "UPM.HE":     "UPM-Kymmene Oyj",
+    "KNEBV.HE":   "KONE Oyj",
+    "STERV.HE":   "Stora Enso Oyj",
+    "SAMPO.HE":   "Sampo Oyj",
+    "KESBV.HE":   "Kesko Oyj",
+    "METSO.HE":   "Metso Oyj",
+    "WRT1V.HE":   "Wärtsilä Oyj",
+    "FORTUM.HE":  "Fortum Oyj",
+    "ELISA.HE":   "Elisa Oyj",
+    "TELIA1.HE":  "Telia Company",
+    "ORNBV.HE":   "Orion Oyj",
+    "HUH1V.HE":   "Huhtamäki Oyj",
+    "OUT1V.HE":   "Outokumpu Oyj",
+    "VALMT.HE":   "Valmet Oyj",
+    "KOJAMO.HE":  "Kojamo Oyj",
+    "TOKMAN.HE":  "Tokmanni Group Oyj",
+    "REMEDY.HE":  "Remedy Entertainment Oyj",
+    "REG1V.HE":   "Revenio Group Oyj",
+    "HARVIA.HE":  "Harvia Oyj",
+    "EFECTE.HE":  "Efecte Oyj",
+    "FIA1S.HE":   "Finnair Oyj",
+    "OMASP.HE":   "Oma Säästöpankki Oyj",
+    "CGCBV.HE":   "Cargotec Oyj",
+    "TTALO.HE":   "Talenom Oyj",
+    "ENDOM.HE":   "Endomines AB",
+    "KAMUX.HE":   "Kamux Oyj",
+    "TNOM.HE":    "Talenom Oyj",
+    "KREATE.HE":  "Kreate Group Oyj",
+    "NIXU.HE":    "Nixu Oyj",
+    "PUUILO.HE":  "Puuilo Oyj",
+    "HKSAV.HE":   "HKScan Oyj",
+    "ATG1V.HE":   "Atria Oyj",
+    "REKA.HE":    "Reka Industrial Oyj",
+    "GOFORE.HE":  "Gofore Oyj",
+    "SOLTEQ.HE":  "Solteq Oyj",
+}
+
 # Kaupankäyntiajat (EET/EEST)
 OMXH_OPEN_HOUR = 10    # 10:00
 OMXH_CLOSE_HOUR = 18   # 18:30
@@ -65,15 +107,52 @@ def resolve_ticker(ticker: str) -> str:
     if ticker_upper.endswith(".HE"):
         return ticker_upper
 
-    # Tarkista alias-lista
+    # Tarkista alias-lista (tukee myös välilyönnilliset nimet kuten "STORA ENSO")
     if ticker_upper in OMXH_TICKERS:
         resolved = OMXH_TICKERS[ticker_upper]
         if resolved is None:
             raise ValueError(f"Osake '{ticker}' ei ole pörssinoteerattu.")
         return resolved
 
+    # Kokeile välilyönti→viiva-muunnos (esim. "NDA FI" → "NDA-FI.HE")
+    dashed = ticker_upper.replace(" ", "-")
+    if dashed != ticker_upper:
+        if dashed in OMXH_TICKERS:
+            resolved = OMXH_TICKERS[dashed]
+            if resolved is None:
+                raise ValueError(f"Osake '{ticker}' ei ole pörssinoteerattu.")
+            return resolved
+        return f"{dashed}.HE"
+
     # Oletus: lisää .HE-suffiksi
     return f"{ticker_upper}.HE"
+
+
+def resolve_company_name(ticker: str) -> str:
+    """
+    Palauttaa yhtiön virallisen nimen tickerille.
+
+    Käytetään agenttikontekstissa estämään uutisagentin virheelliset nimitunnistukset
+    (esim. FIA1S.HE → "Finnair Oyj", ei "Finavia" tai "Embraer").
+
+    Ensin tarkistetaan staattinen kartta, sitten yfinance-fallback.
+    """
+    yf_ticker = resolve_ticker(ticker)
+
+    # Staattinen kartta — nopea, luotettava, ei API-kutsua
+    if yf_ticker in OMXH_COMPANY_NAMES:
+        return OMXH_COMPANY_NAMES[yf_ticker]
+
+    # Fallback: yfinance longName
+    try:
+        info = yf.Ticker(yf_ticker).info
+        name = info.get("longName") or info.get("shortName")
+        if name:
+            return name
+    except Exception:
+        pass
+
+    return yf_ticker  # Viimeinen vaihtoehto: palauta ticker sellaisenaan
 
 
 def get_omxh_stock_data(
@@ -135,6 +214,28 @@ def get_omxh_current_price(ticker: str) -> Optional[float]:
         return info.get("currentPrice") or info.get("regularMarketPrice")
     except Exception:
         return None
+
+
+def get_omxh_price_snapshot(ticker: str) -> dict:
+    """
+    Hakee kurssin, volyymin ja bid/ask analyysihetkellä.
+    Tallennetaan stateen backtestingiä ja signaalien tarkkuuden seurantaa varten.
+
+    Returns:
+        dict — {price, volume, bid, ask, timestamp} tai tyhjät arvot virhetilanteessa
+    """
+    from datetime import timezone
+    try:
+        info = get_omxh_info(ticker)
+        return {
+            "price": info.get("currentPrice") or info.get("regularMarketPrice"),
+            "volume": info.get("regularMarketVolume"),
+            "bid": info.get("bid"),
+            "ask": info.get("ask"),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+    except Exception:
+        return {"price": None, "volume": None, "bid": None, "ask": None, "timestamp": None}
 
 
 def get_omxh_dividends(ticker: str) -> pd.Series:

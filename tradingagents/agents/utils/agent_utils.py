@@ -16,16 +16,31 @@ from tradingagents.agents.utils.fundamental_data_tools import (
 from tradingagents.agents.utils.news_data_tools import (
     get_news,
     get_insider_transactions,
-    get_global_news
+    get_global_news,
+    get_all_stock_news_combined,
+    get_finnish_news,
 )
+from tradingagents.dataflows.omxh_utils import resolve_company_name
 
 
 def build_instrument_context(ticker: str) -> str:
-    """Describe the exact instrument so agents preserve exchange-qualified tickers."""
+    """
+    Describe the exact instrument so agents preserve exchange-qualified tickers.
+    Includes resolved company name to prevent misidentification (e.g. FIA1S.HE → Finnair Oyj,
+    not Finavia or Embraer).
+    """
+    try:
+        company_name = resolve_company_name(ticker)
+    except Exception:
+        company_name = ticker
+
     return (
-        f"The instrument to analyze is `{ticker}`. "
+        f"The instrument to analyze is `{ticker}` ({company_name}). "
+        f"The company name is '{company_name}'. "
         "Use this exact ticker in every tool call, report, and recommendation, "
-        "preserving any exchange suffix (e.g. `.TO`, `.L`, `.HK`, `.T`)."
+        "preserving any exchange suffix (e.g. `.HE`, `.TO`, `.L`). "
+        f"IMPORTANT: Only use data and news that refers to '{company_name}' — "
+        "discard any results about other companies even if the ticker search returns them."
     )
 
 def create_msg_delete():

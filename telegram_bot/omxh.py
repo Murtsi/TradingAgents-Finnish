@@ -1,7 +1,7 @@
 """Ohut wrapper ticker-validoinnille ja hinnan haulle."""
 import logging
 import yfinance as yf
-from tradingagents.dataflows.omxh_utils import get_omxh_current_price, resolve_ticker
+from tradingagents.dataflows.omxh_utils import get_omxh_current_price, get_omxh_price_snapshot, resolve_ticker
 
 logger = logging.getLogger(__name__)
 
@@ -13,6 +13,15 @@ def get_current_price(ticker: str) -> float | None:
     except Exception as e:
         logger.warning(f"Hinnan haku epäonnistui {ticker}: {e}")
         return None
+
+
+def get_price_snapshot(ticker: str) -> dict:
+    """Hakee kurssin, volyymin ja bid/ask analyysihetkellä."""
+    try:
+        return get_omxh_price_snapshot(ticker)
+    except Exception as e:
+        logger.warning(f"Hintasnapshotin haku epäonnistui {ticker}: {e}")
+        return {"price": None, "volume": None, "bid": None, "ask": None, "timestamp": None}
 
 
 def validate_ticker(ticker: str) -> str | None:

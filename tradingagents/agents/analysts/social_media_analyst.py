@@ -19,7 +19,9 @@ def create_social_media_analyst(llm):
 
         # FORK: Suomi-lokalisointi — Finnish system prompt + tool calling instructions
         system_message = (
-            load_fi_prompt("sentiment_system")
+            "KRIITTINEN OHJE: Kirjoita KAIKKI analyysit ja raportit AINA suomeksi. "
+            "Älä koskaan kirjoita englanniksi. Aloita analyysi välittömästi ilman johdantolauseita.\n\n"
+            + load_fi_prompt("sentiment_system")
             + "\n\nALWAYS call get_finnish_news(ticker, company_name) first — it fetches "
             "Finnish-language sources (Kauppalehti, YLE Talous). "
             "Then call get_news(ticker, start_date, end_date) for English-language coverage. "

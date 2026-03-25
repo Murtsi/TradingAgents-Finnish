@@ -64,7 +64,7 @@ def get_news_yfinance(
     """
     try:
         stock = yf.Ticker(ticker)
-        news = stock.get_news(count=20)
+        news = stock.get_news(count=15)
 
         if not news:
             return f"No news found for {ticker}"
@@ -87,7 +87,7 @@ def get_news_yfinance(
 
             news_str += f"### {data['title']} (source: {data['publisher']})\n"
             if data["summary"]:
-                news_str += f"{data['summary']}\n"
+                news_str += f"{data['summary'][:300]}\n"
             if data["link"]:
                 news_str += f"Link: {data['link']}\n"
             news_str += "\n"
@@ -181,7 +181,7 @@ def get_global_news_yfinance(
 
             news_str += f"### {title} (source: {publisher})\n"
             if summary:
-                news_str += f"{summary}\n"
+                news_str += f"{summary[:300]}\n"
             if link:
                 news_str += f"Link: {link}\n"
             news_str += "\n"

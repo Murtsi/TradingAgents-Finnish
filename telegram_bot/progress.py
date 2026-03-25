@@ -48,7 +48,7 @@ def _build_progress_message(
 ) -> str:
     """Puhdas funktio — rakentaa progress-viestin nykyisen tilan perusteella."""
     lines = [
-        f"📊 Analysoin: *{ticker}*",
+        f"Analysoin: *{ticker}*",
         "━━━━━━━━━━━━━━━━━━━━━",
     ]
     for stage in ALL_STAGES:
@@ -56,24 +56,24 @@ def _build_progress_message(
         if stage == "Riskiarvio":
             riskivaiheet = [s for s in completed if "Riskiarvio" in s]
             if riskivaiheet:
-                lines.append(f"✅ Riskiarvio")
+                lines.append("[VALMIS] Riskiarvio")
             elif current and "Riskiarvio" in current:
-                lines.append(f"🔄 Riskiarvio käynnissä...")
+                lines.append("[...] Riskiarvio käynnissä...")
             else:
-                lines.append(f"⏳ Riskiarvio")
+                lines.append("[ ] Riskiarvio")
             continue
 
         if stage in completed:
-            lines.append(f"✅ {stage}")
+            lines.append(f"[VALMIS] {stage}")
         elif stage == current:
-            lines.append(f"🔄 {stage} käynnissä...")
+            lines.append(f"[...] {stage} käynnissä...")
         else:
-            lines.append(f"⏳ {stage}")
+            lines.append(f"[ ] {stage}")
 
     if elapsed_sec > 0:
         mins = elapsed_sec // 60
         secs = elapsed_sec % 60
-        lines.append(f"\n⏱ Kulunut: {mins} min {secs:02d} s")
+        lines.append(f"\nKulunut: {mins} min {secs:02d} s")
 
     return "\n".join(lines)
 
@@ -96,6 +96,7 @@ class AnalysisProgressCallback(BaseCallbackHandler):
         self.completed: list[str] = []
         self.current: str | None = None
         self.elapsed_sec: int = 0
+        self._last_sent: str = ""  # Deduplikointi — estää turhat editMessageText-kutsut
 
     def _resolve_stage(self, name: str) -> str | None:
         """Etsii stage-nimen node-nimestä (case-insensitive partial match)."""
@@ -107,11 +108,14 @@ class AnalysisProgressCallback(BaseCallbackHandler):
 
     def on_chain_start(self, serialized: dict[str, Any], inputs: Any, **kwargs) -> None:
         """Laukeaa kun LangGraph-node käynnistyy."""
-        name = (
-            serialized.get("name", "")
-            or serialized.get("id", [""])[-1]  # LangGraph käyttää id-listaa
-            or ""
-        )
+        if not serialized:
+            name = kwargs.get("name", "") or kwargs.get("run_name", "") or ""
+        else:
+            name = (
+                serialized.get("name", "")
+                or (serialized.get("id") or [""])[-1]
+                or ""
+            )
         stage = self._resolve_stage(str(name))
         if stage is None:
             return
@@ -140,14 +144,26 @@ class AnalysisProgressCallback(BaseCallbackHandler):
             self._push_update()
 
     def update_elapsed(self, elapsed_sec: int) -> None:
-        """Päivitetään kuluneen ajan näyttö (kutsutaan background-timerista)."""
+        """Päivitetään kuluneen ajan näyttö (kutsutaan background-timerista threadista)."""
         self.elapsed_sec = elapsed_sec
         self._push_update()
+
+    async def push_update_async(self, elapsed_sec: int) -> None:
+        """Päivitetään kuluneen ajan näyttö asyncio-kontekstista (ei threadista)."""
+        self.elapsed_sec = elapsed_sec
+        msg = _build_progress_message(self.ticker, self.completed, self.current, self.elapsed_sec)
+        if msg == self._last_sent:
+            return
+        self._last_sent = msg
+        await self.edit_fn(msg)
 
     def _push_update(self) -> None:
         msg = _build_progress_message(
             self.ticker, self.completed, self.current, self.elapsed_sec
         )
+        if msg == self._last_sent:
+            return  # Sama teksti — älä lähetä, estää 400 "message is not modified"
+        self._last_sent = msg
         future = asyncio.run_coroutine_threadsafe(self.edit_fn(msg), self.loop)
         try:
             future.result(timeout=5)

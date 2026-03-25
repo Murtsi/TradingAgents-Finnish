@@ -24,6 +24,12 @@ FINNISH_CONFIG = {
     "max_debate_rounds": 1,        # Tuotannossa: 2–3
     "max_risk_discuss_rounds": 1,
 
+    # ── Tokenirajoitukset (kustannusten hallinta) ──────────────────
+    # Rajoittaa jokaisen agentin vastauspituuden.
+    # 4096 antaa salkunhoitajalle ja tutkijoille tilaa kirjoittaa täydellinen raportti.
+    # TEST_MODE ylikirjoittaa tämän arvolla 500.
+    "max_tokens": 8000,
+
     # ── Datalähteet ────────────────────────────────────────────────
     "online_tools": True,
     "data_vendors": {
@@ -72,7 +78,7 @@ FINNISH_CONFIG = {
     # ── Vastuuvapautus (pakollinen) ────────────────────────────────
     "disclaimer_required": True,
     "disclaimer_text": (
-        "⚠️ VASTUUVAPAUTUS: Tämä on tekoälyn tuottama analyysi, EI sijoitussuositus. "
+        "[VASTUUVAPAUTUS] Tämä on tekoälyn tuottama analyysi, EI sijoitussuositus. "
         "Työkalu on tarkoitettu tutkimus- ja oppimistarkoituksiin. "
         "Sijoittamiseen liittyy aina riskejä ja arvot voivat laskea. "
         "Finanssivalvonta valvoo sijoitusneuvontaa Suomessa. "

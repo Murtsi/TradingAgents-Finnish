@@ -21,7 +21,7 @@ from tradingagents.graph.trading_graph import TradingAgentsGraph
 from tradingagents.finnish_config import get_finnish_config
 from telegram_bot.progress import AnalysisProgressCallback
 from telegram_bot.formatter import format_summary, format_full_report
-from telegram_bot.omxh import get_current_price
+from telegram_bot.omxh import get_current_price, get_price_snapshot
 
 logger = logging.getLogger(__name__)
 
@@ -64,13 +64,12 @@ def _sync_run_analysis(ticker: str, callback: AnalysisProgressCallback) -> dict:
 
 
 async def _elapsed_timer(
-    edit_fn: Callable[[str], Awaitable[None]],
-    ticker: str,
+    callback: "AnalysisProgressCallback",
     stop: asyncio.Event,
 ) -> None:
     """
-    Background task: päivittää progress-viestiä 30s välein suoraan await:lla.
-    EI mene callback-kautta (callback._push_update on tarkoitettu threadeille).
+    Background task: päivittää kuluneen ajan 30s välein.
+    Käyttää callback.push_update_async() jotta stage-lista säilyy eikä ylikirjoitu.
     """
     elapsed = 0
     while not stop.is_set():
@@ -78,15 +77,8 @@ async def _elapsed_timer(
         if stop.is_set():
             break
         elapsed += 30
-        mins = elapsed // 60
-        secs = elapsed % 60
         try:
-            await edit_fn(
-                f"📊 Analysoin: *{ticker}*\n"
-                f"━━━━━━━━━━━━━━━━━━━━━\n"
-                f"🔄 Analyysi käynnissä \\(kestää 2–5 min\\)\n"
-                f"⏱ Kulunut: {mins} min {secs:02d} s"
-            )
+            await callback.push_update_async(elapsed)
         except Exception:
             pass
 
@@ -94,12 +86,12 @@ async def _elapsed_timer(
 async def run_analysis(
     ticker: str,
     edit_message_fn: Callable[[str], Awaitable[None]],
-) -> tuple[str, str]:
+) -> tuple[str, str, dict]:
     """
     Käynnistää analyysin threadissa asyncio.wait_for timeout-suojauksella.
 
     Returns:
-        (summary_text, full_report_text)
+        (summary_text, full_report_text, final_state)
 
     Raises:
         asyncio.TimeoutError: jos analyysi kestää yli ANALYSIS_TIMEOUT_SEC
@@ -112,10 +104,10 @@ async def run_analysis(
         edit_fn=edit_message_fn,
     )
 
-    # Background timer: päivittää kuluneen ajan 30s välein vaikka callbackit
-    # eivät laukeaisi — varmistaa että käyttäjä tietää botin olevan hengissä
+    # Background timer: päivittää kuluneen ajan 30s välein.
+    # Reititetään callback:n kautta jotta stage-lista säilyy näkyvissä.
     timer_stop = asyncio.Event()
-    timer_task = asyncio.create_task(_elapsed_timer(edit_message_fn, ticker, timer_stop))
+    timer_task = asyncio.create_task(_elapsed_timer(callback, timer_stop))
 
     try:
         final_state = await asyncio.wait_for(
@@ -131,6 +123,8 @@ async def run_analysis(
             pass
 
     current_price = await loop.run_in_executor(None, get_current_price, ticker)
+    snapshot = await loop.run_in_executor(None, get_price_snapshot, ticker)
+    final_state["_price_snapshot"] = snapshot
     summary = format_summary(final_state, current_price=current_price)
     full_report = format_full_report(final_state)
-    return summary, full_report
+    return summary, full_report, final_state

@@ -25,6 +25,7 @@ from rich.rule import Rule
 
 from tradingagents.graph.trading_graph import TradingAgentsGraph
 from tradingagents.default_config import DEFAULT_CONFIG
+from tradingagents.finnish_config import get_finnish_config, resolve_omxh_ticker  # FORK: Suomi-lokalisointi
 from cli.models import AnalystType
 from cli.utils import *
 from cli.announcements import fetch_announcements, display_announcements
@@ -633,21 +634,22 @@ def save_report_to_disk(final_state, ticker: str, save_path: Path):
     # 1. Analysts
     analysts_dir = save_path / "1_analysts"
     analyst_parts = []
+    enc = {"encoding": "utf-8"}
     if final_state.get("market_report"):
         analysts_dir.mkdir(exist_ok=True)
-        (analysts_dir / "market.md").write_text(final_state["market_report"])
+        (analysts_dir / "market.md").write_text(final_state["market_report"], **enc)
         analyst_parts.append(("Market Analyst", final_state["market_report"]))
     if final_state.get("sentiment_report"):
         analysts_dir.mkdir(exist_ok=True)
-        (analysts_dir / "sentiment.md").write_text(final_state["sentiment_report"])
+        (analysts_dir / "sentiment.md").write_text(final_state["sentiment_report"], **enc)
         analyst_parts.append(("Social Analyst", final_state["sentiment_report"]))
     if final_state.get("news_report"):
         analysts_dir.mkdir(exist_ok=True)
-        (analysts_dir / "news.md").write_text(final_state["news_report"])
+        (analysts_dir / "news.md").write_text(final_state["news_report"], **enc)
         analyst_parts.append(("News Analyst", final_state["news_report"]))
     if final_state.get("fundamentals_report"):
         analysts_dir.mkdir(exist_ok=True)
-        (analysts_dir / "fundamentals.md").write_text(final_state["fundamentals_report"])
+        (analysts_dir / "fundamentals.md").write_text(final_state["fundamentals_report"], **enc)
         analyst_parts.append(("Fundamentals Analyst", final_state["fundamentals_report"]))
     if analyst_parts:
         content = "\n\n".join(f"### {name}\n{text}" for name, text in analyst_parts)
@@ -660,15 +662,15 @@ def save_report_to_disk(final_state, ticker: str, save_path: Path):
         research_parts = []
         if debate.get("bull_history"):
             research_dir.mkdir(exist_ok=True)
-            (research_dir / "bull.md").write_text(debate["bull_history"])
+            (research_dir / "bull.md").write_text(debate["bull_history"], **enc)
             research_parts.append(("Bull Researcher", debate["bull_history"]))
         if debate.get("bear_history"):
             research_dir.mkdir(exist_ok=True)
-            (research_dir / "bear.md").write_text(debate["bear_history"])
+            (research_dir / "bear.md").write_text(debate["bear_history"], **enc)
             research_parts.append(("Bear Researcher", debate["bear_history"]))
         if debate.get("judge_decision"):
             research_dir.mkdir(exist_ok=True)
-            (research_dir / "manager.md").write_text(debate["judge_decision"])
+            (research_dir / "manager.md").write_text(debate["judge_decision"], **enc)
             research_parts.append(("Research Manager", debate["judge_decision"]))
         if research_parts:
             content = "\n\n".join(f"### {name}\n{text}" for name, text in research_parts)
@@ -678,7 +680,7 @@ def save_report_to_disk(final_state, ticker: str, save_path: Path):
     if final_state.get("trader_investment_plan"):
         trading_dir = save_path / "3_trading"
         trading_dir.mkdir(exist_ok=True)
-        (trading_dir / "trader.md").write_text(final_state["trader_investment_plan"])
+        (trading_dir / "trader.md").write_text(final_state["trader_investment_plan"], **enc)
         sections.append(f"## III. Trading Team Plan\n\n### Trader\n{final_state['trader_investment_plan']}")
 
     # 4. Risk Management
@@ -688,15 +690,15 @@ def save_report_to_disk(final_state, ticker: str, save_path: Path):
         risk_parts = []
         if risk.get("aggressive_history"):
             risk_dir.mkdir(exist_ok=True)
-            (risk_dir / "aggressive.md").write_text(risk["aggressive_history"])
+            (risk_dir / "aggressive.md").write_text(risk["aggressive_history"], **enc)
             risk_parts.append(("Aggressive Analyst", risk["aggressive_history"]))
         if risk.get("conservative_history"):
             risk_dir.mkdir(exist_ok=True)
-            (risk_dir / "conservative.md").write_text(risk["conservative_history"])
+            (risk_dir / "conservative.md").write_text(risk["conservative_history"], **enc)
             risk_parts.append(("Conservative Analyst", risk["conservative_history"]))
         if risk.get("neutral_history"):
             risk_dir.mkdir(exist_ok=True)
-            (risk_dir / "neutral.md").write_text(risk["neutral_history"])
+            (risk_dir / "neutral.md").write_text(risk["neutral_history"], **enc)
             risk_parts.append(("Neutral Analyst", risk["neutral_history"]))
         if risk_parts:
             content = "\n\n".join(f"### {name}\n{text}" for name, text in risk_parts)
@@ -706,12 +708,12 @@ def save_report_to_disk(final_state, ticker: str, save_path: Path):
         if risk.get("judge_decision"):
             portfolio_dir = save_path / "5_portfolio"
             portfolio_dir.mkdir(exist_ok=True)
-            (portfolio_dir / "decision.md").write_text(risk["judge_decision"])
+            (portfolio_dir / "decision.md").write_text(risk["judge_decision"], **enc)
             sections.append(f"## V. Portfolio Manager Decision\n\n### Portfolio Manager\n{risk['judge_decision']}")
 
     # Write consolidated report
     header = f"# Trading Analysis Report: {ticker}\n\nGenerated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
-    (save_path / "complete_report.md").write_text(header + "\n\n".join(sections))
+    (save_path / "complete_report.md").write_text(header + "\n\n".join(sections), **enc)
     return save_path / "complete_report.md"
 
 
@@ -915,17 +917,21 @@ def format_tool_args(args, max_length=80) -> str:
         return result[:max_length - 3] + "..."
     return result
 
-def run_analysis():
+def run_analysis(override_selections=None):
     # First get all user selections
-    selections = get_user_selections()
+    selections = override_selections if override_selections is not None else get_user_selections()
 
-    # Create config with selected research depth
-    config = DEFAULT_CONFIG.copy()
+    # Create config — käytä Finnish-configia jos saatavilla, muuten DEFAULT_CONFIG
+    # FORK: Suomi-lokalisointi — fi_analyze käyttää get_finnish_config()-pohjaa
+    if selections.get("_fi_mode"):
+        config = get_finnish_config()
+    else:
+        config = DEFAULT_CONFIG.copy()
     config["max_debate_rounds"] = selections["research_depth"]
     config["max_risk_discuss_rounds"] = selections["research_depth"]
     config["quick_think_llm"] = selections["shallow_thinker"]
     config["deep_think_llm"] = selections["deep_thinker"]
-    config["backend_url"] = selections["backend_url"]
+    config["backend_url"] = selections.get("backend_url")
     config["llm_provider"] = selections["llm_provider"].lower()
     # Provider-specific thinking configuration
     config["google_thinking_level"] = selections.get("google_thinking_level")
@@ -968,10 +974,10 @@ def run_analysis():
             func(*args, **kwargs)
             timestamp, message_type, content = obj.messages[-1]
             content = content.replace("\n", " ")  # Replace newlines with spaces
-            with open(log_file, "a") as f:
+            with open(log_file, "a", encoding="utf-8") as f:
                 f.write(f"{timestamp} [{message_type}] {content}\n")
         return wrapper
-    
+
     def save_tool_call_decorator(obj, func_name):
         func = getattr(obj, func_name)
         @wraps(func)
@@ -979,7 +985,7 @@ def run_analysis():
             func(*args, **kwargs)
             timestamp, tool_name, args = obj.tool_calls[-1]
             args_str = ", ".join(f"{k}={v}" for k, v in args.items())
-            with open(log_file, "a") as f:
+            with open(log_file, "a", encoding="utf-8") as f:
                 f.write(f"{timestamp} [Tool Call] {tool_name}({args_str})\n")
         return wrapper
 
@@ -993,7 +999,7 @@ def run_analysis():
                 if content:
                     file_name = f"{section_name}.md"
                     text = "\n".join(str(item) for item in content) if isinstance(content, list) else content
-                    with open(report_dir / file_name, "w") as f:
+                    with open(report_dir / file_name, "w", encoding="utf-8") as f:
                         f.write(text)
         return wrapper
 
@@ -1191,6 +1197,61 @@ def run_analysis():
 @app.command()
 def analyze():
     run_analysis()
+
+
+# FORK: Suomi-lokalisointi — yksinkertaistettu suomalainen CLI
+def get_fi_selections() -> dict:
+    """Kysy vain osakkeen tunnus — kaikki muu tulee FINNISH_CONFIGista."""
+    fi_config = get_finnish_config()
+
+    console.print(Panel(
+        "[bold green]KauppaAgentit — OMXH-analyysityokalu[/bold green]\n\n"
+        "Tama on tekoalyn tuottama analyysityokalu tutkimustarkoituksiin.\n"
+        "[dim]EI sijoitusneuvontaa. Kaikki paatokset ovat omalla vastuullasi.[/dim]",
+        border_style="green",
+        padding=(1, 2),
+        title="KauppaAgentit",
+    ))
+    console.print()
+
+    console.print(Panel(
+        "[bold]Anna osakkeen tunnus tai yrityksen nimi[/bold]\n"
+        "[dim]Tunnus:  NOKIA.HE  NESTE.HE  NDA-FI.HE  KNEBV.HE  UPM.HE\n"
+        "Nimi:    NOKIA     NESTE     NORDEA     KONE      UPM[/dim]",
+        border_style="blue",
+        padding=(1, 2),
+    ))
+    raw_ticker = typer.prompt("Osake").strip().upper()
+    ticker = resolve_omxh_ticker(raw_ticker)
+    if ticker != raw_ticker:
+        console.print(f"[dim]  -> {ticker}[/dim]")
+
+    analysis_date = datetime.datetime.now().strftime("%Y-%m-%d")
+    console.print(f"[dim]Analyysipaivamaara: {analysis_date}[/dim]\n")
+
+    from cli.models import AnalystType
+    analysts = [AnalystType(a) for a in ANALYST_ORDER]
+
+    return {
+        "ticker": ticker,
+        "analysis_date": analysis_date,
+        "analysts": analysts,
+        "research_depth": fi_config["max_debate_rounds"],
+        "llm_provider": "anthropic",
+        "backend_url": None,
+        "shallow_thinker": fi_config["quick_think_llm"],
+        "deep_thinker": fi_config["deep_think_llm"],
+        "google_thinking_level": None,
+        "openai_reasoning_effort": None,
+        "anthropic_effort": None,
+        "_fi_mode": True,
+    }
+
+
+@app.command()
+def fi():
+    """KauppaAgentit: Suomalainen OMXH-analyysi (Anthropic Claude, kaikki analyytikot)."""
+    run_analysis(override_selections=get_fi_selections())
 
 
 if __name__ == "__main__":

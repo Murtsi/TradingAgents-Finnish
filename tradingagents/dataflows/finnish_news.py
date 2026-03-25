@@ -1,8 +1,28 @@
 """
-Suomalaiset uutislähteet — RSS-pohjainen datasyöte
-====================================================
-Hakee uutisia Kauppalehti- ja YLE Talous -RSS-syötteistä.
-Ei ulkoisia riippuvuuksia: käyttää vain standardikirjaston urllib + xml.etree.
+Suomalaiset ja pohjoismaiset uutislähteet — RSS-pohjainen datasyöte
+====================================================================
+Lähteet (testattu 2026-03-25):
+
+  Kotimaiset:
+    IS Taloussanomat  — https://www.is.fi/rss/taloussanomat.xml          (toimii)
+    HS Talous         — https://www.hs.fi/rss/talous.xml                 (toimii)
+    YLE Talous        — feeds.yle.fi/...                                  (toimii)
+    Nordnet Blogi     — https://www.nordnet.fi/blog/feed/                 (toimii)
+    Kauppalehti       — POISTETTU (401 Unauthorized)
+
+  Pörssitiedotteet (Nasdaq OMX):
+    Nasdaq Helsinki   — https://api.news.eu.nasdaq.com/news/rss/mainMarketNotices (toimii)
+    Nasdaq First North— https://api.news.eu.nasdaq.com/news/rss/firstNorthNotices (toimii)
+
+  Makro / kansainväliset:
+    ECB               — https://www.ecb.europa.eu/rss/press.xml          (toimii)
+    Investing.com     — https://fi.investing.com/rss/news_25.rss         (toimii, suomeksi)
+
+  Hylätyt:
+    Inderes           — ei RSS-syötettä (404)
+    Talouselämä       — ei RSS-syötettä (404)
+    Reuters           — DNS-esto tässä ympäristössä
+    Suomen Pankki     — RSS-osoitteet muuttuneet (404)
 
 Optimointi: _fetch_rss on LRU-välimuistissa per-prosessi, joten saman analyysin
 aikana RSS-syötteitä ei haeta uudelleen. Yhdistetty get_all_stock_news-funktio
@@ -22,10 +42,27 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-# RSS-syötteet
+# RSS-syötteet — jaettu kolmeen ryhmään käyttötarkoituksen mukaan
+
+# 1. Kotimaiset talousuutiset (suodatetaan tickerin/yhtiön nimellä)
 RSS_FEEDS = {
-    "Kauppalehti": "https://feeds.kauppalehti.fi/rss/uutiset",
-    "YLE Talous":  "https://feeds.yle.fi/uutiset/v1/recent.rss?publisherIds=YLE_UUTISET&concepts=18-35095&limit=30",
+    "IS Taloussanomat": "https://www.is.fi/rss/taloussanomat.xml",
+    "HS Talous":        "https://www.hs.fi/rss/talous.xml",
+    "YLE Talous":       "https://feeds.yle.fi/uutiset/v1/recent.rss?publisherIds=YLE_UUTISET&concepts=18-35095&limit=30",
+    "Nordnet Blogi":    "https://www.nordnet.fi/blog/feed/",
+}
+
+# 2. Pörssitiedotteet — Nasdaq OMX Helsinki (kaikki yhtiötiedotteet)
+# Ei 30s nopeampaa pollausta (Nasdaq rate limit)
+RSS_FEEDS_EXCHANGE = {
+    "Nasdaq Helsinki":    "https://api.news.eu.nasdaq.com/news/rss/mainMarketNotices",
+    "Nasdaq First North": "https://api.news.eu.nasdaq.com/news/rss/firstNorthNotices",
+}
+
+# 3. Makrouutiset — aina mukana (ei ticker-suodatusta)
+RSS_FEEDS_MACRO = {
+    "ECB":             "https://www.ecb.europa.eu/rss/press.xml",
+    "Investing.com":   "https://fi.investing.com/rss/news_25.rss",
 }
 
 _TIMEOUT = 8  # sekuntia
@@ -52,11 +89,11 @@ OMXH_KEYWORDS: dict[str, list[str]] = {
     "HUH1V.HE":   ["Huhtamäki", "Huhtamaki"],
 }
 
-# Yleiset suomalaiset markkinaavainsanat (aina mukana)
+# Yleiset suomalaiset markkinaavainsanat (aina mukana kotimaisissa syötteissä)
 _MARKET_KEYWORDS = [
     "omxh", "helsingin pörssi", "ekp", "euroopan keskuspankki",
     "korko", "inflaatio", "osakemarkkinat", "pörssi", "helsinki",
-    "suomen talous", "talouskasvu",
+    "suomen talous", "talouskasvu", "nordnet", "nasdaq",
 ]
 
 
@@ -128,8 +165,12 @@ def get_finnish_market_news(
     lookback_days: int = 7,
 ) -> str:
     """
-    Hakee viimeisimmät suomalaiset talousuutiset RSS:stä.
-    Käyttää LRU-välimuistia — nopea jos kutsutaan useasti saman analyysin aikana.
+    Hakee viimeisimmät suomalaiset ja pohjoismaiset uutiset RSS:stä.
+
+    Lähteet:
+      - Kotimaiset (IS, HS, YLE, Nordnet): suodatetaan tickerin nimellä
+      - Nasdaq pörssitiedotteet: suodatetaan yhtiön nimellä
+      - Makro (ECB, Investing.com): aina mukana ilman suodatusta
     """
     company_keywords = _lookup_keywords(ticker, company_name)
     all_keywords = company_keywords + _MARKET_KEYWORDS
@@ -137,6 +178,8 @@ def get_finnish_market_news(
     short = ticker.replace(".HE", "").upper()
 
     results: list[str] = []
+
+    # 1. Kotimaiset uutiset — suodatetaan yhtiön/markkinan avainsanoilla
     for source, url in RSS_FEEDS.items():
         for art in _fetch_rss_cached(url):
             if art["pub_dt"] and art["pub_dt"] < cutoff:
@@ -144,13 +187,35 @@ def get_finnish_market_news(
             if _is_relevant(art, all_keywords):
                 results.append(_format_article(art, source))
 
-    if not results:
+    # 2. Nasdaq pörssitiedotteet — suodatetaan yhtiön nimellä (ei markkinasanoilla)
+    for source, url in RSS_FEEDS_EXCHANGE.items():
+        for art in _fetch_rss_cached(url):
+            if art["pub_dt"] and art["pub_dt"] < cutoff:
+                continue
+            if _is_relevant(art, company_keywords):
+                results.append(_format_article(art, source))
+
+    # 3. Makrouutiset — aina mukana (max 3 per lähde, ei suodatusta)
+    macro_results: list[str] = []
+    for source, url in RSS_FEEDS_MACRO.items():
+        count = 0
+        for art in _fetch_rss_cached(url):
+            if art["pub_dt"] and art["pub_dt"] < cutoff:
+                continue
+            if count >= 3:
+                break
+            macro_results.append(_format_article(art, source))
+            count += 1
+
+    all_results = results[:12] + macro_results
+    if not all_results:
         return (
-            f"Ei suomenkielisiä uutisia löydetty osakkeelle {short} "
-            f"viimeisen {lookback_days} päivän ajalta (Kauppalehti/YLE Talous)."
+            f"Ei uutisia löydetty osakkeelle {short} "
+            f"viimeisen {lookback_days} päivän ajalta."
         )
-    header = f"## Suomalaiset talousuutiset — {short} (viimeiset {lookback_days} pv)\n\n"
-    return header + "\n\n".join(results[:15])
+
+    header = f"## Suomalaiset ja pohjoismaiset uutiset — {short} (viimeiset {lookback_days} pv)\n\n"
+    return header + "\n\n".join(all_results)
 
 
 def get_all_stock_news(ticker: str, trade_date: str, lookback_days: int = 7) -> str:
@@ -159,8 +224,9 @@ def get_all_stock_news(ticker: str, trade_date: str, lookback_days: int = 7) -> 
 
     Yhdistää:
       1. Yahoo Finance -uutiset tickerille (yfinance)
-      2. Suomalaiset RSS-uutiset (Kauppalehti, YLE Talous)
-      3. ECB/Nordic-makrouutiset (Yahoo Finance Search)
+      2. Kotimaiset RSS: IS Taloussanomat, HS Talous, YLE Talous, Nordnet Blogi
+      3. Nasdaq pörssitiedotteet (mainMarket + First North)
+      4. Makro: ECB, Investing.com (suomeksi)
 
     Tarkoitus: yksi LLM-tool-call kolmen sijaan → ~50 % vähemmän LLM-pyörähdyksiä
     uutisanalyytikossa → nopeampi ja halvempi ajo.

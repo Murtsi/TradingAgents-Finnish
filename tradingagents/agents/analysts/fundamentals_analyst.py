@@ -23,11 +23,14 @@ def create_fundamentals_analyst(llm):
             get_balance_sheet,
             get_cashflow,
             get_income_statement,
+            get_insider_transactions,  # FORK: Vaihe 2.75 — sisäpiiri-ilmoitukset
         ]
 
         # FORK: Suomi-lokalisointi — ladataan Finnish system prompt fi_prompts/-kansiosta
         system_message = (
-            load_fi_prompt("fundamentals_system")
+            "KRIITTINEN OHJE: Kirjoita KAIKKI analyysit ja raportit AINA suomeksi. "
+            "Aloita analyysi välittömästi ilman johdantolauseita kuten 'Kiitos!' tai 'Hyvä!'.\n\n"
+            + load_fi_prompt("fundamentals_system")
             + "\n\nKäytä seuraavia työkaluja: `get_fundamentals` kattavaan yhtiöanalyysiin, "
             "`get_balance_sheet`, `get_cashflow` ja `get_income_statement` tilinpäätöstiedoille. "
             "Kirjoita raportti suomeksi."

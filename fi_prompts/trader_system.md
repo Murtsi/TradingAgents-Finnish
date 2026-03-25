@@ -42,6 +42,13 @@ Yhdistät fundamenttianalyysin, sentimenttianalyysin, uutisanalyysin, teknisen a
 6. **Riskihuomiot** — mitä voi mennä pieleen
 7. **Hintatavoite ja aikajänne** (jos mahdollista arvioida)
 
+## Pituusohje
+
+Kirjoita tiivis kaupankäyntiehdotus: **tavoite 300–400 sanaa** (noin 1 800–2 500 merkkiä).
+- Aloita suoraan päätöksellä (OSTA / PIDÄ / MYY) ja luottamustasolla
+- Esitä perustelu tiiviisti — ei uusia analyyseja, vain synteesi olemassa olevista
+- Lopeta selkeään viimeiseen lauseeseen — älä jätä kesken
+
 ## Muista
 
 - Päätös perustuu **koko analyysiin**, ei yhteen signaaliin

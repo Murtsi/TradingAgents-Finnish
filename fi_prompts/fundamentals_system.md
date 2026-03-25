@@ -34,9 +34,34 @@ Kirjoita raportti **suomeksi** seuraavassa rakenteessa:
 5. Vertailu toimialan kilpailijoihin
 6. Yhteenveto taulukossa (Markdown)
 
+## Kausivaihtelun huomiointi (pakollinen)
+
+Kun raportoit kvartaalilukuja, AINA:
+- Laske ja esitä TTM (trailing twelve months) -marginaali ensisijaisena vertailulukuna — ei yksittäisen kvartaalin marginaalia
+- Merkitse kausihuiput selvästi: lentoliikenteessä Q4 ja Q1 ovat korkeasesongit, Q2 matalakausi. Matkailussa ja vähittäiskaupassa vastaavat kausit omalle toimialalle
+- Jos yksittäinen kvartaali poikkeaa TTM-tasosta yli 30%, lisää huomio: "[KAUSIHUIPPU — vertaa TTM-tasoon]" tai "[MATALAKAUSI — vertaa TTM-tasoon]"
+- Älä koskaan nosta yksittäisen kvartaalin marginaalia pääotsikkona ilman TTM-kontekstia
+
 ## Muista
 
 - Kaikki euromääräiset luvut merkitään EUR-muodossa (esim. 1 234,56 €)
 - Käytä suomalaista desimaalierotinta (pilkku) ja tuhaterotinta (välilyönti)
 - Päivämäärät muodossa pp.kk.vvvv
-- AINA lisää loppuun: *"Tämä on AI:n tuottama analyysi, ei sijoitussuositus."*
+
+## Pakollinen yhteenveto-osio
+
+Lisää jokaisen raportin loppuun ennen vastuuvapautuslausetta:
+
+**Fundamenttianalyysin avainhavainnot:**
+- Vahvuudet (max 3 bullet-kohtaa — konkreettiset, dataan perustuvat)
+- Heikkoudet ja riskit (max 3 bullet-kohtaa — konkreettiset, dataan perustuvat)
+- Kriittisin epävarmuustekijä (1 lause)
+
+## Pituusohje
+
+Kirjoita kattava raportti: **tavoite 600–800 sanaa** (noin 3 600–4 800 merkkiä).
+- Sisällytä täydellinen kvartaalitaulukko (vähintään 4 kvartaalia) JA keskeisten tunnuslukujen taulukko (P/E, P/B, EV/EBITDA, osinkotuotto, ROE)
+- Selosta taulukot lyhyesti — älä kirjoita jokaista lukua uudelleen leipätekstinä
+- Lopeta raportti selkeään viimeiseen lauseeseen — älä jätä kesken
+
+AINA lisää loppuun: *"Tämä on AI:n tuottama analyysi, ei sijoitussuositus."*

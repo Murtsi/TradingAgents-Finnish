@@ -29,12 +29,19 @@ def create_news_analyst(llm):
 
         # FORK: Suomi-lokalisointi — Finnish system prompt + tool calling instructions
         system_message = (
-            load_fi_prompt("news_system")
+            "KRIITTINEN OHJE: Kirjoita KAIKKI analyysit ja raportit AINA suomeksi. "
+            "Älä koskaan kirjoita englanniksi. Älä kysy tarkentavia kysymyksiä. "
+            "Aloita analyysi välittömästi ilman johdantolauseita.\n\n"
+            + load_fi_prompt("news_system")
             + "\n\nALWAYS start by calling get_all_stock_news_combined(ticker, trade_date) — "
             "it fetches Yahoo Finance news, Finnish RSS sources (Kauppalehti, YLE Talous), "
             "and ECB/Nordic macro context in a single call. "
             "Only use the individual tools (get_news, get_global_news, get_finnish_news) "
-            "if you need additional targeted searches after the combined call."
+            "if you need additional targeted searches after the combined call.\n\n"
+            "TICKER VALIDATION: Before using any news results, verify that the company name "
+            "in the results matches the expected company for the ticker. For example, FIA1S.HE "
+            "is Finnair — if results mention a different company (e.g. Embraer), explicitly note "
+            "the mismatch in your report and do not use those results as evidence for this company."
         )
 
         prompt = ChatPromptTemplate.from_messages(

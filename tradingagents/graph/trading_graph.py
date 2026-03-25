@@ -30,7 +30,9 @@ from tradingagents.agents.utils.agent_utils import (
     get_income_statement,
     get_news,
     get_insider_transactions,
-    get_global_news
+    get_global_news,
+    get_all_stock_news_combined,
+    get_finnish_news,
 )
 
 from .conditional_logic import ConditionalLogic
@@ -180,6 +182,8 @@ class TradingAgentsGraph:
             "news": ToolNode(
                 [
                     # News and insider information
+                    get_all_stock_news_combined,  # FORK: preferred combined tool
+                    get_finnish_news,             # FORK: Kauppalehti + YLE RSS
                     get_news,
                     get_global_news,
                     get_insider_transactions,

@@ -45,4 +45,22 @@ Arvioi seuraavat asteikolla **Vahvasti negatiivinen → Negatiivinen → Neutraa
 
 - Erota faktat mielipiteistä selkeästi
 - Mainitse lähteet, kun mahdollista
-- AINA lisää loppuun: *"Tämä on AI:n tuottama analyysi, ei sijoitussuositus."*
+
+## Pakollinen yhteenveto-osio
+
+Lisää jokaisen raportin loppuun ennen vastuuvapautuslausetta:
+
+**Sentimenttianalyysin avainhavainnot:**
+- Positiiviset sentimenttisignaalit (max 3 bullet-kohtaa)
+- Negatiiviset sentimenttisignaalit (max 3 bullet-kohtaa)
+- Kriittisin sentimenttimuutos tai epävarmuus (1 lause)
+
+## Pituusohje
+
+Kirjoita tiivis raportti: **tavoite 300–500 sanaa** (noin 1 800–3 000 merkkiä).
+- Älä toista samoja havaintoja useampaan kertaan
+- Jätä pois itsestäänselvyydet
+- Lopeta raportti selkeään viimeiseen lauseeseen — älä jätä kesken
+- Jos jokin data puuttuu, mainitse se lyhyesti ja jatka eteenpäin
+
+AINA lisää loppuun: *"Tämä on AI:n tuottama analyysi, ei sijoitussuositus."*
