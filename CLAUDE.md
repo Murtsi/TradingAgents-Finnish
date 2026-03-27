@@ -163,6 +163,8 @@ Yksi täysi analyysi maksaa API-kuluissa ~0.10–0.40€. Alla realistisemmat ra
 - [x] Strukturoitu "Avainhavainnot"-osio lisätty 6 analyytikkopromptiin (fundamentals, news, sentiment, technical, bull, bear) — Vaihe 3.5 pohja
 - [x] CLI `fi`-komento: `python -m cli.main fi` — kysyy vain tickerin, käyttää FINNISH_CONFIGia
 - [x] CLI Windows UTF-8 enkoodauskorjaus — kaikki tiedostokirjoitukset `encoding="utf-8"`
+- [x] RSI/MACD/Bollinger raja-arvokorjaus (2026-03-26) — `fi_prompts/technical_system.md`:ään lisätty eksplisiittinen tulkintataulukko (RSI <30 ylimyyty, >70 ylinostettu, 30–70 neutraali) LLM-virhetulkintojen estämiseksi
+- [x] Teknisen analyysin cache-esto (2026-03-26) — `CACHE_CONFIG` lisätty `finnish_config.py`:hin TTL=0 avaimille `technical_`, `rsi_`, `macd_`, `bollinger_` — aikasarjalaskelmat eivät saa jäädä cacheen
 - [ ] Docker Compose -ympäristö pystyyn (PostgreSQL + Redis + app)
 
 ### Vaihe 1.5: AI Act & Compliance (PAKOLLINEN ennen julkaisua)

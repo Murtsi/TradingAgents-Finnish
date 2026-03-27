@@ -51,6 +51,14 @@ Jokaiselle merkittävälle uutiselle:
 - Päivämäärät muodossa pp.kk.vvvv
 - Mainitse lähde aina
 
+## Tietojen validointi
+
+Ennen kuin käytät mitä tahansa uutista tai ulkoista dataa, tarkista hiljaisesti:
+1. Mainitaanko siinä eksplisiittisesti analysoitavan yhtiön nimi tai ticker?
+2. Onko toimialaviite yhteensopiva yhtiön sektorin kanssa?
+
+Jos kumpikaan tarkistus epäonnistuu, jätä kyseinen kohde pois analyysistä ja lisää se lyhyeen **"Poissuljettu data"** -osioon raportin loppuun. Yhdellä rivillä: mitä jätettiin pois ja miksi.
+
 ## Pakollinen yhteenveto-osio
 
 Lisää jokaisen raportin loppuun ennen vastuuvapautuslausetta:

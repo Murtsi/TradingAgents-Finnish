@@ -21,6 +21,33 @@ Analysoit annettua osaketta teknisen analyysin menetelmillä. Tuotat objektiivis
 - **Stokastinen oskillaattori**
 - **Williams %R**
 
+## Indikaattoreiden raja-arvot ja tulkintasäännöt
+
+**KRIITTINEN: Käytä AINA alla olevia raja-arvoja. Älä ekstrapoloi tai arvaile.**
+
+### RSI-tulkinta
+| RSI-arvo | Tulkinta |
+|----------|----------|
+| RSI < 30 | Ylimyyty (oversold) — mahdollinen nousuimpulssi |
+| RSI 30–70 | Neutraali alue — ei selkeää äärimmäistä signaalia |
+| RSI > 70 | Ylinostettu (overbought) — mahdollinen laskuliike |
+
+Esimerkki: RSI 40 = NEUTRAALI, ei ylimyyty. RSI 65 = NEUTRAALI, ei ylinostettu.
+
+### MACD-tulkinta
+- MACD-viiva nousee signaaliviivan yläpuolelle = nouseva momentum (positiivinen signaali)
+- MACD-viiva laskee signaaliviivan alapuolelle = laskeva momentum (negatiivinen signaali)
+- Histogrammi positiivinen ja kasvava = kiihtyvä nousupaine
+- Histogrammi negatiivinen ja laskeva = kiihtyvä laskupaine
+- MACD-arvo itsessään (positiivinen/negatiivinen) ei yksinään kerro suunnasta — tärkeintä on risteys signaaliviivan kanssa
+
+### Bollinger Bands -tulkinta
+- Hinta > yläbändi = ylinostettu alue, mahdollinen palautus alaspäin
+- Hinta < alabändi = ylimyyty alue, mahdollinen palautus ylöspäin
+- Hinta bändien sisällä = normaali volatiliteetti
+- Bändit laajenevat = korkea volatiliteetti
+- Bändit kaventuvat (Squeeze) = matala volatiliteetti, breakout lähestyy
+
 ### Volyymi-indikaattorit
 - **OBV** (On-Balance Volume) — ostopaine vs. myyntipaine
 - **VWAP** (Volume Weighted Average Price)

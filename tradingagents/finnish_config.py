@@ -87,6 +87,16 @@ FINNISH_CONFIG = {
 
     # ── Tuloshakemisto ─────────────────────────────────────────────
     "results_dir": os.getenv("TRADINGAGENTS_RESULTS_DIR", "./results"),
+
+    # ── Cache-konfiguraatio ────────────────────────────────────────
+    # TTL = 0: ei cachea koskaan — tekninen analyysi on aikasarjalaskelma
+    # joka muuttuu jokaisen uuden kynttilän myötä. Vanha arvo on aina väärä.
+    "cache_config": {
+        "technical_{ticker}": 0,
+        "rsi_{ticker}": 0,
+        "macd_{ticker}": 0,
+        "bollinger_{ticker}": 0,
+    },
 }
 
 

@@ -123,6 +123,32 @@ OMXH_COMPANY_NAMES: dict[str, str] = {
     "HM-B.ST":    "H&M Hennes & Mauritz AB",
 }
 
+# FORK: Suomi-lokalisointi — ISIN + toimiala yrityskohtaisesti, estää nimitunnistusvirheet (esim. Neste vs Nestlé)
+OMXH_COMPANY_META: dict[str, dict] = {
+    "NOKIA.HE":   {"name": "Nokia Oyj",           "isin": "FI0009000681", "sector": "Technology / Telecom Equipment"},
+    "NDA-FI.HE":  {"name": "Nordea Bank Abp",     "isin": "FI4000297767", "sector": "Financials / Banking"},
+    "NESTE.HE":   {"name": "Neste Oyj",            "isin": "FI0009013296", "sector": "Energy / Oil Refining & Renewables"},
+    "UPM.HE":     {"name": "UPM-Kymmene Oyj",     "isin": "FI0009005987", "sector": "Materials / Forestry & Paper"},
+    "KNEBV.HE":   {"name": "KONE Oyj",             "isin": "FI0009013403", "sector": "Industrials / Elevators & Escalators"},
+    "STERV.HE":   {"name": "Stora Enso Oyj",       "isin": "FI0009005961", "sector": "Materials / Paper & Packaging"},
+    "SAMPO.HE":   {"name": "Sampo Oyj",            "isin": "FI0009003305", "sector": "Financials / Insurance"},
+    "KESBV.HE":   {"name": "Kesko Oyj",            "isin": "FI0009000202", "sector": "Consumer Staples / Retail"},
+    "METSO.HE":   {"name": "Metso Oyj",            "isin": "FI4000397905", "sector": "Industrials / Mining Equipment"},
+    "WRT1V.HE":   {"name": "Wärtsilä Oyj",         "isin": "FI0009003727", "sector": "Industrials / Marine & Energy Systems"},
+    "FORTUM.HE":  {"name": "Fortum Oyj",           "isin": "FI0009007132", "sector": "Utilities / Electric Power"},
+    "ELISA.HE":   {"name": "Elisa Oyj",            "isin": "FI0009007884", "sector": "Communication Services / Telecom"},
+    "ORNBV.HE":   {"name": "Orion Oyj",            "isin": "FI0009014377", "sector": "Healthcare / Pharmaceuticals"},
+    "HUH1V.HE":   {"name": "Huhtamäki Oyj",        "isin": "FI0009000459", "sector": "Materials / Packaging"},
+    "OUT1V.HE":   {"name": "Outokumpu Oyj",        "isin": "FI0009002422", "sector": "Materials / Steel"},
+    "VALMT.HE":   {"name": "Valmet Oyj",           "isin": "FI4000074984", "sector": "Industrials / Process Equipment"},
+    "FIA1S.HE":   {"name": "Finnair Oyj",          "isin": "FI0009003230", "sector": "Industrials / Airlines"},
+    "SAMPO.HE":   {"name": "Sampo Oyj",            "isin": "FI0009003305", "sector": "Financials / Insurance"},
+    "CGCBV.HE":   {"name": "Cargotec Oyj",         "isin": "FI0009013429", "sector": "Industrials / Cargo Handling Equipment"},
+    "GOFORE.HE":  {"name": "Gofore Oyj",           "isin": "FI4000198767", "sector": "Technology / IT Consulting"},
+    "REMEDY.HE":  {"name": "Remedy Entertainment Oyj", "isin": "FI4000153580", "sector": "Technology / Video Games"},
+    "HARVIA.HE":  {"name": "Harvia Oyj",           "isin": "FI4000297360", "sector": "Consumer Discretionary / Sauna Equipment"},
+}
+
 # Kaupankäyntiajat (EET/EEST)
 OMXH_OPEN_HOUR = 10    # 10:00
 OMXH_CLOSE_HOUR = 18   # 18:30
@@ -191,6 +217,22 @@ def resolve_company_name(ticker: str) -> str:
         pass
 
     return yf_ticker  # Viimeinen vaihtoehto: palauta ticker sellaisenaan
+
+
+def resolve_company_meta(ticker: str) -> dict:
+    """
+    Palauttaa yhtiön nimen, ISIN-tunnuksen ja toimialan tickerille.
+
+    Käytetään agenttikontekstissa estämään nimitunnistusvirheet uutisanalyysissä
+    (esim. NESTE.HE → Neste Oyj / FI0009013296 / Energy, EI Nestlé).
+
+    Palauttaa dict-muodossa: {"name": str, "isin": str | None, "sector": str | None}
+    """
+    yf_ticker = resolve_ticker(ticker)
+    if yf_ticker in OMXH_COMPANY_META:
+        return OMXH_COMPANY_META[yf_ticker]
+    # Fallback: name only
+    return {"name": resolve_company_name(ticker), "isin": None, "sector": None}
 
 
 def get_omxh_stock_data(
