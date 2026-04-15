@@ -1,123 +1,160 @@
 # KauppaAgentit
 
-Fork of [TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents), localized for the Helsinki Stock Exchange (OMXH).
+Suomenkielinen laajennus TradingAgents-kehyksestä Helsingin pörssin (OMXH) osakkeiden analysointiin.
+
+> Tämä projekti perustuu [TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents) -kehykseen ja tuo siihen suomenkielisiä prompteja, OMXH-painotuksia sekä paikalliseen käyttöön sovitettuja komponentteja.
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Python 3.13+](https://img.shields.io/badge/Python-3.13+-blue.svg)](https://python.org)
-
-**Vastuuvapautus:** Tämä on tutkimus- ja oppimistarkoituksiin tehty työkalu. Se ei ole sijoitusneuvontaa. Sijoittamiseen liittyy aina riski pääoman menettämisestä.
-
----
-
-## Mitä tämä on
-
-KauppaAgentit ajaa sarjan LLM-pohjaisia agentteja, jotka analysoivat OMXH-osakkeita suomeksi. Upstream-kehys (TradingAgents) hoitaa agenttien orkestroinnin LangGraphin kautta — tämä fork lisää suomalaisen lokalisoinnin.
-
-**Muutokset upstreamiin:**
-- `fi_prompts/` — suomenkieliset system-promptit kaikille agentteille
-- `tradingagents/dataflows/omxh_utils.py` — OMXH ticker-muunnokset, Yahoo Finance `.HE`-suffiksi
-- `tradingagents/dataflows/finnish_news.py` — RSS-syötteet: IS Taloussanomat, HS Talous, YLE Talous, Nasdaq OMX Helsinki
-- `tradingagents/finnish_config.py` — Suomi-konfiguraatio (EUR, OMXH, verokonteksti, Haiku oletuksena)
-- `telegram_bot/` — Telegram-botti `/analysoi`-komennolla
-- `db/` — PostgreSQL-schema analyysihistorialle
+[![Python 3.13+](https://img.shields.io/badge/Python-3.13+-green.svg)](https://python.org)
+[![Upstream: TradingAgents](https://img.shields.io/badge/Upstream-TradingAgents-orange.svg)](https://github.com/TauricResearch/TradingAgents)
 
 ---
 
-## Agenttipipeline
+## Yleiskuva
 
-Agentit ajetaan järjestyksessä:
+KauppaAgentit on komentoriviltä käytettävä suomenkielinen toteutus TradingAgents-kehyksen ympärille. Projektin tarkoitus on helpottaa monen agentin LLM-pohjaisen analyysiputken käyttöä suomalaisessa markkinaympäristössä, erityisesti OMXH-yhtiöiden tarkastelussa.
 
-1. **Rinnakkain:** fundamenttianalyytikko, tekninen analyytikko, uutisanalyytikko, sentimenttianalyytikko
-2. **Väittely:** bull-tutkija vs. bear-tutkija (`max_debate_rounds`, oletus 1)
-3. **Päätös:** kauppias → riskienhallinta → salkunhoitaja → OSTA / PIDÄ / MYY
+Keskeiset painopisteet:
 
-Kukin agentti lataa system-promptin `fi_prompts/`-hakemistosta.
+- suomenkieliset promptit ja analyysipolut
+- komentorivikäyttö alkuperäisen projektin tapaan
+- suomalaisiin lähteisiin sovitettu data- ja uutisvirta
+- PostgreSQL-tallennus analyysituloksille
+- arviointi- ja backtesting-ajot paikallisiin käyttötapauksiin
+
+---
+
+## Keskeiset ominaisuudet
+
+- **Suomenkieliset promptit** (`fi_prompts/`) agenttien ohjaukseen ja analyysien tuottamiseen
+- **Komentorivikäyttöliittymä** (`cli/`) interaktiiviseen käyttöön terminalissa
+- **Tietokantakerros** (`db/`) analyysien ja tulosten tallennukseen
+- **Arviointitulokset** (`eval_results/`) testiajojen ja vertailujen tueksi
+- **Python-rajapinta** kehyksen käyttämiseen myös osana muuta sovellusta
+
+---
+
+## Projektirakenne
+
+```text
+TradingAgents-Finnish/
+├── tradingagents/        # Ydinjärjestelmä (upstream-pohja)
+├── fi_prompts/           # Suomenkieliset promptit
+├── db/                   # PostgreSQL-schema ja migraatiot
+├── eval_results/         # Arviointi- ja backtesting-tulokset
+├── docs/superpowers/     # Tekninen dokumentaatio
+├── cli/                  # Komentoriviliittymä
+└── tests/                # Testit
+```
 
 ---
 
 ## Asennus
 
+### 1. Kloonaa repositorio
+
 ```bash
 git clone https://github.com/Murtsi/TradingAgents-Finnish.git
 cd TradingAgents-Finnish
-uv sync        # tai: pip install -e .
-cp .env.example .env
-# Täytä API-avaimet .env-tiedostoon
 ```
 
-Vaaditut ympäristömuuttujat:
-
-```env
-ANTHROPIC_API_KEY=sk-ant-...       # tai OPENAI_API_KEY / GOOGLE_API_KEY
-TELEGRAM_BOT_TOKEN=123456:...      # vain Telegram-bottia varten
-TELEGRAM_WHITELIST=123456789       # pilkulla erotettu lista Telegram-käyttäjä-ID:istä
-```
-
-Valinnainen:
-```env
-ALPHA_VANTAGE_API_KEY=...          # vain jos käytät Alpha Vantage -datalähdettä
-TEST_MODE=true                     # rajoittaa max_tokens=500, ~0.02–0.05 €/ajo
-```
-
----
-
-## Telegram-botti
+### 2. Luo ympäristö
 
 ```bash
-python -m telegram_bot.bot
+conda create -n tradingagents python=3.13
+conda activate tradingagents
 ```
 
-Komennot: `/analysoi NOKIA`
+Vaihtoehtoisesti:
 
-Tuetut tickerit: NOKIA, NORDEA, NESTE, KONE, UPM, SAMPO, KESKO ja muut OMXH-osakkeet.
-Täydellinen lista: `tradingagents/dataflows/omxh_utils.py` → `OMXH_TICKERS`
+```bash
+uv sync
+```
 
-Botti vaatii whitelist-tunnistautumisen (`TELEGRAM_WHITELIST`). Tuntemattomat käyttäjät
-ohitetaan hiljaa (ei virheviestiä).
+### 3. Asenna riippuvuudet
+
+```bash
+pip install -e .
+```
+
+tai
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Lisää ympäristömuuttujat
+
+Kopioi esimerkkitiedosto ja täydennä omat avaimet:
+
+```bash
+cp .env.example .env
+```
+
+Tuetut palvelut:
+
+```env
+OPENAI_API_KEY=...
+GOOGLE_API_KEY=...
+ANTHROPIC_API_KEY=...
+XAI_API_KEY=...
+OPENROUTER_API_KEY=...
+ALPHA_VANTAGE_API_KEY=...
+```
 
 ---
 
-## CLI
+## Käyttö komentoriviltä
+
+Ohjelmaa käytetään komentoriviltä alkuperäisen TradingAgents-projektin tavoin.
 
 ```bash
 python -m cli.main
 ```
 
-Interaktiivinen valikko: ticker, päivämäärä, LLM-tarjoaja, analyysin syvyys.
+Käynnistyksen jälkeen käyttäjä voi valita interaktiivisesti analysoitavan tickerin, päivämäärän, käytettävän LLM-palvelun sekä analyysin syvyyden.
 
 ---
 
-## Python API
+## Python-käyttö
 
 ```python
-from dotenv import load_dotenv
 from tradingagents.graph.trading_graph import TradingAgentsGraph
-from tradingagents.finnish_config import get_finnish_config
+from tradingagents.default_config import DEFAULT_CONFIG
 
-load_dotenv()
+config = DEFAULT_CONFIG.copy()
+config["llm_provider"] = "anthropic"
+config["deep_think_llm"] = "claude-opus-4"
+config["quick_think_llm"] = "claude-haiku-4"
+config["max_debate_rounds"] = 2
 
-config = get_finnish_config()
 ta = TradingAgentsGraph(debug=True, config=config)
 _, decision = ta.propagate("NOKIA", "2026-03-24")
 print(decision)
 ```
 
-Kaikki konfiguraatioavaimet: `tradingagents/default_config.py`
-Suomi-spesifiset asetukset: `tradingagents/finnish_config.py`
+Lisäasetukset löytyvät tiedostosta `tradingagents/default_config.py`.
 
 ---
 
-## Kustannusarvio
+## Arkkitehtuuri
 
-Yksi täysi analyysi (kaikki agentit, 1 väittelykierros):
-- Claude Haiku: ~0,05–0,10 €
-- Claude Sonnet: ~0,30–0,50 €
+KauppaAgentit hyödyntää useista rooleista koostuvaa analyysiprosessia, jossa eri agentit tarkastelevat markkinaa eri näkökulmista.
 
-`TEST_MODE=true` rajoittaa max_tokens=500, jolloin kustannus on ~0,02–0,05 €/ajo.
+| Agentti | Rooli |
+|---|---|
+| Fundamenttianalyytikko | Yhtiön taloudellinen analyysi |
+| Sentimenttianalyytikko | Markkinatunnelman arviointi |
+| Uutisanalyytikko | Uutis- ja tapahtumavetoisen tiedon käsittely |
+| Tekninen analyytikko | Teknisten indikaattorien tarkastelu |
+| Tutkijatiimi | Näkemysten vertailu ja väittely |
+| Kaupankäyntiagentti | Päätösehdotuksen muodostaminen |
+| Riskienhallinta | Riskitason arviointi |
+| Portfoliopäällikkö | Lopullinen hyväksyntä- tai hylkäyspäätös |
 
 ---
 
-## Testit
+## Testaus
 
 ```bash
 pytest tests/
@@ -125,42 +162,12 @@ pytest tests/
 
 ---
 
-## Rakenne
+## Huomioitavaa
 
-```
-tradingagents/        upstream-ydinkoodi (muokattu minimiin)
-fi_prompts/           suomenkieliset system-promptit
-telegram_bot/         Telegram-botti
-cli/                  komentoriviliittymä
-db/                   PostgreSQL-schema ja migraatiot
-tests/                testit
-```
+Tämä projekti on tarkoitettu tutkimus-, kehitys- ja kokeilukäyttöön. Se ei ole sijoitusneuvontaa eikä takaa kaupankäyntituloksia.
 
 ---
 
-## Upstream-synkronointi
+## Lähtöprojekti ja lisenssi
 
-```bash
-git fetch upstream
-git merge upstream/main
-```
-
-Omat muutokset on merkitty `# FORK: Suomi-lokalisointi` upstream-tiedostoissa.
-Uudet suomi-spesifiset tiedostot eivät muuta upstream-koodia.
-
----
-
-## Lisenssi
-
-Apache 2.0. Perustuu [TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents) -projektiin.
-
-```bibtex
-@misc{xiao2025tradingagents,
-  title={TradingAgents: Multi-Agents LLM Financial Trading Framework},
-  author={Yijia Xiao and Edward Sun and Di Luo and Wei Wang},
-  year={2025},
-  eprint={2412.20138},
-  archivePrefix={arXiv},
-  url={https://arxiv.org/abs/2412.20138}
-}
-```
+Tämä repositorio pohjautuu [TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents) -projektiin. Alkuperäinen lisenssi ja upstream-viittaukset tulee säilyttää projektissa.
