@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "tradingagents"
+name = "kauppaagentit"
 version = "0.2.2"
-description = "TradingAgents: Multi-Agents LLM Financial Trading Framework"
+description = "KauppaAgentit: Finnish fork of TradingAgents, localized for OMXH (Helsinki Stock Exchange)"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [

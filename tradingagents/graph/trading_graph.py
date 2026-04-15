@@ -267,7 +267,10 @@ class TradingAgentsGraph:
             "final_trade_decision": final_state["final_trade_decision"],
         }
 
-        # Save to file
+        # Ticker is validated by resolve_ticker() before propagate() is called.
+        # Guard against path traversal in case caller skips validation.
+        if ".." in self.ticker or "/" in self.ticker or "\\" in self.ticker:
+            raise ValueError(f"Invalid ticker for path: {self.ticker!r}")
         directory = Path(f"eval_results/{self.ticker}/TradingAgentsStrategy_logs/")
         directory.mkdir(parents=True, exist_ok=True)
 

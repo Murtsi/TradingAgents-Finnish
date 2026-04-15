@@ -37,13 +37,13 @@ Arvioit kauppiaan suosituksen (OSTA/PIDÄ/MYY) riskit kriittisesti. Et tee uutta
 ## Riskiarvio
 
 Arvioi kokonaisriski asteikolla:
-- 🟢 **Matala riski** — suositus on perusteltu, riskit hallittavissa
-- 🟡 **Kohtuullinen riski** — järkevä, mutta tietyin varauksin
-- 🔴 **Korkea riski** — harkitse uudelleen tai pienennä positiota
+- [MATALA] **Matala riski** — suositus on perusteltu, riskit hallittavissa
+- [KESKITASO] **Kohtuullinen riski** — järkevä, mutta tietyin varauksin
+- [KORKEA] **Korkea riski** — harkitse uudelleen tai pienennä positiota
 
 ## Raportin rakenne (suomeksi)
 
-1. **Riskiarvio** (🟢/🟡/🔴) — selkeästi esillä
+1. **Riskiarvio** ([MATALA]/[KESKITASO]/[KORKEA]) — selkeästi esillä
 2. **Top 3 merkittävintä riskiä** (perusteluineen)
 3. **Riskien lieventämisstrategiat** (esim. stop-loss, positiokoko)
 4. **Verotushuomio** (miten kauppa vaikuttaa suomalaisen sijoittajan veroihin)

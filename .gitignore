@@ -1,5 +1,4 @@
 # ===== TIETOTURVA =====
-# API-avaimet ja ympäristömuuttujat - EI KOSKAAN versionhallintaan
 .env
 .env.local
 .env.*.local
@@ -101,6 +100,11 @@ build/
 # ===== CACHE =====
 **/data_cache/
 
+# ===== GENERATED ANALYSIS OUTPUTS =====
+eval_results/
+reports/
+results/
+
 # ===== OS =====
 .DS_Store
 Thumbs.db
@@ -108,3 +112,21 @@ Thumbs.db
 # ===== IDE =====
 # .vscode/
 # .idea/
+
+# ===== LLM CACHE =====
+.llm_cache.db
+*.db
+
+# ===== AI TOOLING (local dev only) =====
+.claude-flow/
+.claude/
+.mcp.json
+CLAUDE.md
+AGENTS.md
+GEMINI.md
+.cursorrules
+.cursorignore
+.windsurfrules
+
+# ===== INTERNAL PLANNING DOCS =====
+docs/superpowers/

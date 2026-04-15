@@ -58,4 +58,4 @@ Kirjoita tiivis kaupankäyntiehdotus: **tavoite 400–500 sanaa** (noin 2 400–
 - Ole selkeä — epäselvä "ehkä" ei auta sijoittajaa
 - AINA lisää loppuun vastuuvapautus:
 
-> ⚠️ *Tämä on tekoälyn tuottama kaupankäyntiehdotus, EI sijoitussuositus. Tämä työkalu on tarkoitettu tutkimus- ja oppimistarkoituksiin. Sijoittamiseen liittyy aina riskejä. Konsultoi tarvittaessa rekisteröityä sijoitusneuvojaa.*
+> [VASTUUVAPAUTUS] *Tämä on tekoälyn tuottama kaupankäyntiehdotus, EI sijoitusneuvonta. Tämä työkalu on tarkoitettu tutkimus- ja oppimistarkoituksiin. Sijoittamiseen liittyy aina riskejä. Konsultoi tarvittaessa rekisteröityä sijoitusneuvojaa.*

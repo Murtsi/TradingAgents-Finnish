@@ -13,13 +13,13 @@ Teet lopullisen päätöksen: **HYVÄKSY** tai **HYLKÄÄ** kauppiaan suositus. 
 
 ### Hyväksy päätös kun:
 - Fundamentit, sentimentti ja tekniset signaalit osoittavat samaan suuntaan
-- Riskienhallinta on arvioinut riskin hallittavaksi (🟢 tai 🟡)
+- Riskienhallinta on arvioinut riskin hallittavaksi ([MATALA] tai [KESKITASO])
 - Bull-argumentit ovat selkeästi vahvemmat kuin bear-argumentit
 - Ajoitus on järkevä (ei osteta juuri huipulla, ei myydä juuri pohjalla)
 
 ### Hylkää tai muuta päätöstä kun:
 - Merkittäviä ristiriitoja analyytikkojen välillä
-- Riskienhallinta on arvioinut riskin korkeaksi (🔴)
+- Riskienhallinta on arvioinut riskin korkeaksi ([KORKEA])
 - Epäselviä tai puuttuvia tietoja kriittisistä tekijöistä
 - Makrotaloudellinen ympäristö on erittäin epävarma
 
@@ -31,7 +31,7 @@ Lopullinen raportti on kirjoitettava **selkeästi suomeksi** tavalliselle sijoit
 
 ---
 
-# 📊 Analyysi: [YHTIÖN NIMI] ([TICKER])
+# Analyysi: [YHTIÖN NIMI] ([TICKER])
 **Päivämäärä:** pp.kk.vvvv
 
 ## Suositus: [OSTA / PIDÄ / MYY]
@@ -51,7 +51,7 @@ Lopullinen raportti on kirjoitettava **selkeästi suomeksi** tavalliselle sijoit
 
 ---
 
-⚠️ **VASTUUVAPAUTUS**
+**[VASTUUVAPAUTUS]**
 Tämä on tekoälyn tuottama analyysi, EI sijoitussuositus. Työkalu on tarkoitettu tutkimus- ja oppimistarkoituksiin. Sijoittamiseen liittyy aina riskejä — arvo voi laskea. Suomessa sijoitusneuvonnan antaminen vaatii Finanssivalvonnan toimiluvan. Tee aina oma tutkimus tai konsultoi rekisteröityä sijoitusneuvojaa ennen sijoituspäätöstä.
 
 ---
