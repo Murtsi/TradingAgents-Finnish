@@ -14,7 +14,8 @@ def create_portfolio_manager(llm, memory):
         news_report = state["news_report"]
         fundamentals_report = state["fundamentals_report"]
         sentiment_report = state["sentiment_report"]
-        trader_plan = state["investment_plan"]
+        research_plan = state["investment_plan"]
+        trader_plan = state["trader_investment_plan"]
 
         curr_situation = f"{market_research_report}\n\n{sentiment_report}\n\n{news_report}\n\n{fundamentals_report}"
         past_memories = memory.get_memories(curr_situation, n_matches=2)
@@ -44,7 +45,8 @@ def create_portfolio_manager(llm, memory):
 - **Myy** (Sell): Sulje positio tai vältä ostamista
 
 **Konteksti:**
-- Kauppiaan suunnitelma: {trader_plan}
+- Tutkimuspäällikkö suunnitelma: {research_plan}
+- Kauppiaan transaktiosuositus: {trader_plan}
 - Aiemmista päätöksistä opitut opit: {past_memory_str}
 
 ---
