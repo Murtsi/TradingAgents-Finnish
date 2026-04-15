@@ -1,58 +1,71 @@
-# KauppaAgentit (TradingAgents-Finnish)
+# KauppaAgentit
 
-> **Fork of [TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents)** — lokalisoitu ja laajennettu suomalaisille markkinoille (OMXH).
+Suomenkielinen sovellus- ja integraatiokerros TradingAgents-kehyksen ympärille, painottuen Helsingin pörssin (OMXH) osakkeiden analysointiin.
+
+> Tämä projekti perustuu [TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents) -kehykseen ja laajentaa sitä suomenkielisellä käyttöliittymällä, Telegram-integraatiolla sekä paikalliseen käyttöön sovitetuilla komponenteilla.
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python 3.13+](https://img.shields.io/badge/Python-3.13+-green.svg)](https://python.org)
-[![Upstream: TradingAgents v0.2.2](https://img.shields.io/badge/Upstream-v0.2.2-orange.svg)](https://github.com/TauricResearch/TradingAgents)
+[![Upstream: TradingAgents](https://img.shields.io/badge/Upstream-TradingAgents-orange.svg)](https://github.com/TauricResearch/TradingAgents)
 
 ---
 
-## Mitä tämä projekti on?
+## Yleiskuva
 
-**KauppaAgentit** on suomenkielinen laajennus TradingAgents-kehyksestä. Alkuperäinen projekti on monikansallinen LLM-pohjainen kaupankäyntijarjestelmä — tämä fork tuo sen lähemmäksi Suomea:
+KauppaAgentit on suomenkielinen toteutus ja jatkokehitys TradingAgents-kehyksestä. Projektin tavoitteena on tehdä monen agentin LLM-pohjaisesta analyysiputkesta helpommin käytettävä suomalaisessa ympäristössä, erityisesti OMXH-yhtiöiden tarkastelussa.
 
-- **Suomenkieliset promptit** (`fi_prompts/`) — agentit ajattelevat ja vastaavat suomeksi
-- **Telegram-botti** (`telegram_bot/`) — analysoi OMXH-osakkeita suoraan Telegramista
-- **Suomalainen uutisvirtaus** — hakee dataa suomalaisista uutisahteista
-- **PostgreSQL-tietokanta** (`db/`) — tallentaa analyysit ja tulokset
-- **Arviointitulokset** (`eval_results/`) — backtesting-tulokset suomalaisilla osakkeilla
+Projektissa on painotettu seuraavia osa-alueita:
+
+- suomenkieliset promptit ja käyttöpolut
+- Telegram-botti osakeanalyysien ajamiseen
+- suomalaisiin lähteisiin sovitettu uutis- ja datavirta
+- PostgreSQL-pohjainen tallennus analyysituloksille
+- arviointi- ja backtesting-ajot paikallisiin käyttötapauksiin
+
+---
+
+## Keskeiset ominaisuudet
+
+- **Suomenkieliset promptit** (`fi_prompts/`) agenttien ohjaukseen ja analyysien tuottamiseen
+- **Telegram-botti** (`telegram_bot/`) nopeaan käyttöön ilman erillistä käyttöliittymää
+- **Tietokantakerros** (`db/`) analyysien ja tulosten tallennukseen
+- **Arviointiaineistot** (`eval_results/`) testiajojen ja vertailujen tueksi
+- **Komentorivikäyttöliittymä** (`cli/`) paikalliseen käyttöön ja kehitykseen
 
 ---
 
 ## Projektirakenne
 
-```
+```text
 TradingAgents-Finnish/
-|-- tradingagents/        # Ydinjärjestelmä (upstream)
-|-- fi_prompts/           # Suomenkieliset promptit agentteille
-|-- telegram_bot/         # Telegram-botti (/analysoi NOKIA)
-|-- db/                   # PostgreSQL-schema ja migraatiot
-|-- eval_results/         # Backtesting-tulokset
-|-- docs/superpowers/     # Tekninen dokumentaatio ja suunnitelmat
-|-- cli/                  # Komentoriviliittymä
-|-- tests/                # Testit
+├── tradingagents/        # Ydinjärjestelmä (upstream-pohja)
+├── fi_prompts/           # Suomenkieliset promptit
+├── telegram_bot/         # Telegram-botti
+├── db/                   # PostgreSQL-schema ja migraatiot
+├── eval_results/         # Arviointi- ja backtesting-tulokset
+├── docs/superpowers/     # Tekninen dokumentaatio
+├── cli/                  # Komentoriviliittymä
+└── tests/                # Testit
 ```
 
 ---
 
-## Telegram-botti (KauppaAgentit)
+## Käyttö Telegramin kautta
 
-Helpoin tapa käyttää tätä projektia on Telegram-botin kautta.
+Telegram-botti tarjoaa suoraviivaisen tavan käynnistää analyysi ilman paikallista käyttöliittymää.
 
 ### Käynnistys
 
-1. Hanki bot token: Telegram → `@BotFather` → `/newbot`
-2. Hanki oma Telegram-ID: `@userinfobot`
-3. Lisää `.env`-tiedostoon:
+1. Luo botti Telegramissa `@BotFather`-palvelun kautta.
+2. Selvitä oma Telegram-ID esimerkiksi `@userinfobot`-botilla.
+3. Lisää tarvittavat muuttujat `.env`-tiedostoon.
+4. Käynnistä botti paikallisesti.
 
 ```env
-TELEGRAM_BOT_TOKEN=123456:ABC-DEF...
-TELEGRAM_WHITELIST=123456789
-ANTHROPIC_API_KEY=sk-ant-...
+TELEGRAM_BOT_TOKEN=your_bot_token
+TELEGRAM_WHITELIST=your_telegram_id
+ANTHROPIC_API_KEY=your_api_key
 ```
-
-4. Käynnistä:
 
 ```bash
 python -m telegram_bot.bot
@@ -62,9 +75,9 @@ python -m telegram_bot.bot
 
 | Komento | Kuvaus |
 |---|---|
-| `/analysoi NOKIA` | Täysi osakeanalyysi (1–5 min) |
+| `/analysoi NOKIA` | Suorittaa osakeanalyysin annetulle tickerille |
 
-### OMXH-esimerkkejä
+### Esimerkkejä OMXH-yhtiöistä
 
 | Yhtiö | Komento |
 |---|---|
@@ -76,7 +89,7 @@ python -m telegram_bot.bot
 
 ---
 
-## Asennus (kehitysympäristö)
+## Asennus
 
 ### 1. Kloonaa repositorio
 
@@ -85,14 +98,14 @@ git clone https://github.com/Murtsi/TradingAgents-Finnish.git
 cd TradingAgents-Finnish
 ```
 
-### 2. Luo virtuaaliympäristö
+### 2. Luo ympäristö
 
 ```bash
 conda create -n tradingagents python=3.13
 conda activate tradingagents
 ```
 
-Tai `uv`-työkalulla:
+Vaihtoehtoisesti:
 
 ```bash
 uv sync
@@ -102,27 +115,31 @@ uv sync
 
 ```bash
 pip install -e .
-# tai
+```
+
+tai
+
+```bash
 pip install -r requirements.txt
 ```
 
-### 4. API-avaimet
+### 4. Lisää ympäristömuuttujat
 
-Kopioi `.env.example` → `.env` ja täytä avaimesi:
+Kopioi esimerkkitiedosto ja täydennä omat avaimet:
 
 ```bash
 cp .env.example .env
 ```
 
-Tuetut LLM-tarjoajat:
+Tuetut palvelut:
 
 ```env
-OPENAI_API_KEY=...        # OpenAI (GPT)
-GOOGLE_API_KEY=...        # Google (Gemini)
-ANTHROPIC_API_KEY=...     # Anthropic (Claude)
-XAI_API_KEY=...           # xAI (Grok)
-OPENROUTER_API_KEY=...    # OpenRouter
-ALPHA_VANTAGE_API_KEY=... # Alpha Vantage (markkinadata)
+OPENAI_API_KEY=...
+GOOGLE_API_KEY=...
+ANTHROPIC_API_KEY=...
+XAI_API_KEY=...
+OPENROUTER_API_KEY=...
+ALPHA_VANTAGE_API_KEY=...
 ```
 
 ---
@@ -133,18 +150,18 @@ ALPHA_VANTAGE_API_KEY=... # Alpha Vantage (markkinadata)
 python -m cli.main
 ```
 
-Valitse ticker, päivämäärä, LLM-tarjoaja ja analyysin syvyys interaktiivisessa valikossa.
+Komentorivikäyttöliittymässä voidaan valita ticker, päivämäärä, LLM-palvelu ja analyysin asetukset interaktiivisesti.
 
 ---
 
-## Python-käyttö
+## Python-esimerkki
 
 ```python
 from tradingagents.graph.trading_graph import TradingAgentsGraph
 from tradingagents.default_config import DEFAULT_CONFIG
 
 config = DEFAULT_CONFIG.copy()
-config["llm_provider"] = "anthropic"   # openai, google, anthropic, xai, openrouter, ollama
+config["llm_provider"] = "anthropic"
 config["deep_think_llm"] = "claude-opus-4"
 config["quick_think_llm"] = "claude-haiku-4"
 config["max_debate_rounds"] = 2
@@ -154,30 +171,28 @@ _, decision = ta.propagate("NOKIA", "2026-03-24")
 print(decision)
 ```
 
-Katso kaikki asetukset: `tradingagents/default_config.py`
+Lisäasetukset löytyvät tiedostosta `tradingagents/default_config.py`.
 
 ---
 
-## Kehys (upstream)
+## Arkkitehtuuri
 
-KauppaAgentit perustuu TradingAgents-kehykseen, joka simuloi oikean kauppayhtiön dynamiikkaa useilla erikoistuneilla LLM-agentteilla:
+KauppaAgentit hyödyntää useista rooleista koostuvaa analyysiprosessia, jossa eri agentit tarkastelevat markkinaa eri näkökulmista.
 
 | Agentti | Rooli |
 |---|---|
-| **Fundamenttianalyyytikko** | Yhtiön taloudellinen analyysi ja sisäinen arvo |
-| **Sentimenttianalyytikko** | Sosiaalinen media ja markkinamieliala |
-| **Uutisanalyytikko** | Globaalit uutiset ja makrotalous |
-| **Tekninen analyytikko** | MACD, RSI ja kaaviokuviot |
-| **Tutkijatiimi** | Bullish vs. bearish -väittely |
-| **Kaupankävijä-agentti** | Päätöksenteko analyyseistä |
-| **Riskienhallinta** | Portfolion riski ja volatiilisuus |
-| **Portfoliopäällikkö** | Hyväksy/hylkää transaktiot |
-
-> **Vastuuvapauslauseke:** Tämä järjestelmä on tarkoitettu tutkimuslkäyttöön. Se ei ole sijoitusneuvontaa. Kaupankäyntisuorituskyky vaihtelee mallista, laadusta ja markkinaolosuhteista riippuen.
+| Fundamenttianalyytikko | Yhtiön taloudellinen analyysi |
+| Sentimenttianalyytikko | Markkinatunnelman arviointi |
+| Uutisanalyytikko | Uutis- ja tapahtumavetoisen tiedon käsittely |
+| Tekninen analyytikko | Teknisten indikaattorien tarkastelu |
+| Tutkijatiimi | Näkemysten vertailu ja väittely |
+| Kaupankäyntiagentti | Päätösehdotuksen muodostaminen |
+| Riskienhallinta | Riskitason arviointi |
+| Portfoliopäällikkö | Lopullinen hyväksyntä- tai hylkäyspäätös |
 
 ---
 
-## Testit
+## Testaus
 
 ```bash
 pytest tests/
@@ -185,19 +200,23 @@ pytest tests/
 
 ---
 
-## Upstream & lisenssi
+## Huomioitavaa
 
-Tämä projekti on forkattu [TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents) -repositoriosta (Apache 2.0).
+Tämä projekti on tarkoitettu tutkimus-, kehitys- ja kokeilukäyttöön. Se ei ole sijoitusneuvontaa eikä takaa kaupankäyntituloksia.
 
-Alkuperäinen tutkimusjulkaisu:
+---
+
+## Lähtöprojekti ja lisenssi
+
+Tämä repositorio pohjautuu [TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents) -projektiin. Alkuperäinen lisenssi ja upstream-viittaukset tulee säilyttää projektissa.
+
+Alkuperäinen julkaisu:
 
 ```bibtex
-@misc{xiao2025tradingagentsmultiagentsllmfinancial,
+@article{xiao2024tradingagents,
   title={TradingAgents: Multi-Agents LLM Financial Trading Framework},
-  author={Yijia Xiao and Edward Sun and Di Luo and Wei Wang},
-  year={2025},
-  eprint={2412.20138},
-  archivePrefix={arXiv},
-  url={https://arxiv.org/abs/2412.20138}
+  author={Xiao, Yijia and Sun, Edward and Luo, Di and Wang, Wei},
+  journal={arXiv preprint arXiv:2412.20138},
+  year={2024}
 }
 ```
