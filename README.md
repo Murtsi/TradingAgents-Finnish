@@ -1,8 +1,8 @@
 # KauppaAgentit
 
-Suomenkielinen sovellus- ja integraatiokerros TradingAgents-kehyksen ympärille, painottuen Helsingin pörssin (OMXH) osakkeiden analysointiin.
+Suomenkielinen laajennus TradingAgents-kehyksestä Helsingin pörssin (OMXH) osakkeiden analysointiin.
 
-> Tämä projekti perustuu [TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents) -kehykseen ja laajentaa sitä suomenkielisellä käyttöliittymällä, Telegram-integraatiolla sekä paikalliseen käyttöön sovitetuilla komponenteilla.
+> Tämä projekti perustuu [TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents) -kehykseen ja tuo siihen suomenkielisiä prompteja, OMXH-painotuksia sekä paikalliseen käyttöön sovitettuja komponentteja.
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python 3.13+](https://img.shields.io/badge/Python-3.13+-green.svg)](https://python.org)
@@ -12,14 +12,14 @@ Suomenkielinen sovellus- ja integraatiokerros TradingAgents-kehyksen ympärille,
 
 ## Yleiskuva
 
-KauppaAgentit on suomenkielinen toteutus ja jatkokehitys TradingAgents-kehyksestä. Projektin tavoitteena on tehdä monen agentin LLM-pohjaisesta analyysiputkesta helpommin käytettävä suomalaisessa ympäristössä, erityisesti OMXH-yhtiöiden tarkastelussa.
+KauppaAgentit on komentoriviltä käytettävä suomenkielinen toteutus TradingAgents-kehyksen ympärille. Projektin tarkoitus on helpottaa monen agentin LLM-pohjaisen analyysiputken käyttöä suomalaisessa markkinaympäristössä, erityisesti OMXH-yhtiöiden tarkastelussa.
 
-Projektissa on painotettu seuraavia osa-alueita:
+Keskeiset painopisteet:
 
-- suomenkieliset promptit ja käyttöpolut
-- Telegram-botti osakeanalyysien ajamiseen
-- suomalaisiin lähteisiin sovitettu uutis- ja datavirta
-- PostgreSQL-pohjainen tallennus analyysituloksille
+- suomenkieliset promptit ja analyysipolut
+- komentorivikäyttö alkuperäisen projektin tapaan
+- suomalaisiin lähteisiin sovitettu data- ja uutisvirta
+- PostgreSQL-tallennus analyysituloksille
 - arviointi- ja backtesting-ajot paikallisiin käyttötapauksiin
 
 ---
@@ -27,10 +27,10 @@ Projektissa on painotettu seuraavia osa-alueita:
 ## Keskeiset ominaisuudet
 
 - **Suomenkieliset promptit** (`fi_prompts/`) agenttien ohjaukseen ja analyysien tuottamiseen
-- **Telegram-botti** (`telegram_bot/`) nopeaan käyttöön ilman erillistä käyttöliittymää
+- **Komentorivikäyttöliittymä** (`cli/`) interaktiiviseen käyttöön terminalissa
 - **Tietokantakerros** (`db/`) analyysien ja tulosten tallennukseen
-- **Arviointiaineistot** (`eval_results/`) testiajojen ja vertailujen tueksi
-- **Komentorivikäyttöliittymä** (`cli/`) paikalliseen käyttöön ja kehitykseen
+- **Arviointitulokset** (`eval_results/`) testiajojen ja vertailujen tueksi
+- **Python-rajapinta** kehyksen käyttämiseen myös osana muuta sovellusta
 
 ---
 
@@ -40,52 +40,12 @@ Projektissa on painotettu seuraavia osa-alueita:
 TradingAgents-Finnish/
 ├── tradingagents/        # Ydinjärjestelmä (upstream-pohja)
 ├── fi_prompts/           # Suomenkieliset promptit
-├── telegram_bot/         # Telegram-botti
 ├── db/                   # PostgreSQL-schema ja migraatiot
 ├── eval_results/         # Arviointi- ja backtesting-tulokset
 ├── docs/superpowers/     # Tekninen dokumentaatio
 ├── cli/                  # Komentoriviliittymä
 └── tests/                # Testit
 ```
-
----
-
-## Käyttö Telegramin kautta
-
-Telegram-botti tarjoaa suoraviivaisen tavan käynnistää analyysi ilman paikallista käyttöliittymää.
-
-### Käynnistys
-
-1. Luo botti Telegramissa `@BotFather`-palvelun kautta.
-2. Selvitä oma Telegram-ID esimerkiksi `@userinfobot`-botilla.
-3. Lisää tarvittavat muuttujat `.env`-tiedostoon.
-4. Käynnistä botti paikallisesti.
-
-```env
-TELEGRAM_BOT_TOKEN=your_bot_token
-TELEGRAM_WHITELIST=your_telegram_id
-ANTHROPIC_API_KEY=your_api_key
-```
-
-```bash
-python -m telegram_bot.bot
-```
-
-### Komennot
-
-| Komento | Kuvaus |
-|---|---|
-| `/analysoi NOKIA` | Suorittaa osakeanalyysin annetulle tickerille |
-
-### Esimerkkejä OMXH-yhtiöistä
-
-| Yhtiö | Komento |
-|---|---|
-| Nokia | `/analysoi NOKIA` |
-| Nordea | `/analysoi NORDEA` |
-| Neste | `/analysoi NESTE` |
-| KONE | `/analysoi KONE` |
-| UPM | `/analysoi UPM` |
 
 ---
 
@@ -144,17 +104,19 @@ ALPHA_VANTAGE_API_KEY=...
 
 ---
 
-## CLI-käyttö
+## Käyttö komentoriviltä
+
+Ohjelmaa käytetään komentoriviltä alkuperäisen TradingAgents-projektin tavoin.
 
 ```bash
 python -m cli.main
 ```
 
-Komentorivikäyttöliittymässä voidaan valita ticker, päivämäärä, LLM-palvelu ja analyysin asetukset interaktiivisesti.
+Käynnistyksen jälkeen käyttäjä voi valita interaktiivisesti analysoitavan tickerin, päivämäärän, käytettävän LLM-palvelun sekä analyysin syvyyden.
 
 ---
 
-## Python-esimerkki
+## Python-käyttö
 
 ```python
 from tradingagents.graph.trading_graph import TradingAgentsGraph
@@ -209,14 +171,3 @@ Tämä projekti on tarkoitettu tutkimus-, kehitys- ja kokeilukäyttöön. Se ei 
 ## Lähtöprojekti ja lisenssi
 
 Tämä repositorio pohjautuu [TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents) -projektiin. Alkuperäinen lisenssi ja upstream-viittaukset tulee säilyttää projektissa.
-
-Alkuperäinen julkaisu:
-
-```bibtex
-@article{xiao2024tradingagents,
-  title={TradingAgents: Multi-Agents LLM Financial Trading Framework},
-  author={Xiao, Yijia and Sun, Edward and Luo, Di and Wang, Wei},
-  journal={arXiv preprint arXiv:2412.20138},
-  year={2024}
-}
-```
