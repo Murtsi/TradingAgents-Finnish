@@ -1,8 +1,8 @@
 # KauppaAgentit
 
-Suomenkielinen laajennus TradingAgents-kehyksestä Helsingin pörssin (OMXH) osakkeiden analysointiin.
+Suomenkielinen TradingAgents-haara Helsingin pörssin (OMXH) osakkeiden analysointiin.
 
-> Tämä projekti perustuu [TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents) -kehykseen ja tuo siihen suomenkielisiä prompteja, OMXH-painotuksia sekä paikalliseen käyttöön sovitettuja komponentteja.
+> Projekti pohjautuu [TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents)-kehykseen ja tuo siihen suomenkielisiä promptteja, OMXH-käyttöön sovitettuja muutoksia sekä paikallisia integraatioita.
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python 3.13+](https://img.shields.io/badge/Python-3.13+-green.svg)](https://python.org)
@@ -12,25 +12,28 @@ Suomenkielinen laajennus TradingAgents-kehyksestä Helsingin pörssin (OMXH) osa
 
 ## Yleiskuva
 
-KauppaAgentit on komentoriviltä käytettävä suomenkielinen toteutus TradingAgents-kehyksen ympärille. Projektin tarkoitus on helpottaa monen agentin LLM-pohjaisen analyysiputken käyttöä suomalaisessa markkinaympäristössä, erityisesti OMXH-yhtiöiden tarkastelussa.
+KauppaAgentit on suomenkielinen toteutus TradingAgents-kehyksestä. Sen tarkoitus on helpottaa monen agentin LLM-pohjaisen analyysiputken käyttöä suomalaisessa markkinaympäristössä, erityisesti OMXH-yhtiöiden tarkastelussa.
+
+Projekti säilyttää upstream-rakenteen ytimen, mutta lisää suomenkielisiä prompteja, paikallisia asetuksia sekä käyttöä tukevia komponentteja. Käyttö tapahtuu pääasiassa komentoriviltä.
 
 Keskeiset painopisteet:
-
 - suomenkieliset promptit ja analyysipolut
+- OMXH-painotteinen käyttö
 - komentorivikäyttö alkuperäisen projektin tapaan
-- suomalaisiin lähteisiin sovitettu data- ja uutisvirta
-- PostgreSQL-tallennus analyysituloksille
-- arviointi- ja backtesting-ajot paikallisiin käyttötapauksiin
+- paikalliset laajennukset ja integraatiot
+- Docker- ja ympäristömuuttujapohjainen käyttöönotto
 
 ---
 
 ## Keskeiset ominaisuudet
 
-- **Suomenkieliset promptit** (`fi_prompts/`) agenttien ohjaukseen ja analyysien tuottamiseen
-- **Komentorivikäyttöliittymä** (`cli/`) interaktiiviseen käyttöön terminalissa
-- **Tietokantakerros** (`db/`) analyysien ja tulosten tallennukseen
-- **Arviointitulokset** (`eval_results/`) testiajojen ja vertailujen tueksi
-- **Python-rajapinta** kehyksen käyttämiseen myös osana muuta sovellusta
+- **Suomenkieliset promptit** (`fi_prompts/`) agenttien ohjaukseen
+- **Komentorivikäyttö** (`cli/`) interaktiiviseen ajamiseen
+- **Upstream-yhteensopiva ydin** (`tradingagents/`) säilytettynä pohjana
+- **Tietokantakomponentit** (`db/`) paikallista tallennusta ja skeemaa varten
+- **Telegram-botti** (`telegram_bot/`) vaihtoehtoisena käyttörajapintana
+- **Testit** (`tests/`) kehityksen ja regressioiden tueksi
+- **Docker-tuki** (`Dockerfile`, `docker-compose.yml`) käyttöönottoon eri ympäristöissä
 
 ---
 
@@ -38,13 +41,19 @@ Keskeiset painopisteet:
 
 ```text
 TradingAgents-Finnish/
-├── tradingagents/        # Ydinjärjestelmä (upstream-pohja)
-├── fi_prompts/           # Suomenkieliset promptit
-├── db/                   # PostgreSQL-schema ja migraatiot
-├── eval_results/         # Arviointi- ja backtesting-tulokset
-├── docs/superpowers/     # Tekninen dokumentaatio
+├── assets/               # Projektin resurssit
 ├── cli/                  # Komentoriviliittymä
-└── tests/                # Testit
+├── db/                   # Tietokantaskeema ja siihen liittyvät tiedostot
+├── fi_prompts/           # Suomenkieliset promptit
+├── telegram_bot/         # Telegram-käyttöliittymä
+├── tests/                # Testit
+├── tradingagents/        # Upstream-pohjainen ydin
+├── Dockerfile
+├── docker-compose.yml
+├── main.py
+├── pyproject.toml
+├── requirements.txt
+└── README.md
 ```
 
 ---
@@ -65,7 +74,7 @@ conda create -n tradingagents python=3.13
 conda activate tradingagents
 ```
 
-Vaihtoehtoisesti:
+Vaihtoehtoisesti voit käyttää `uv`:ta:
 
 ```bash
 uv sync
@@ -85,34 +94,33 @@ pip install -r requirements.txt
 
 ### 4. Lisää ympäristömuuttujat
 
-Kopioi esimerkkitiedosto ja täydennä omat avaimet:
-
 ```bash
 cp .env.example .env
 ```
 
-Tuetut palvelut:
+Täytä sen jälkeen tarvittavat API-avaimet omaan ympäristöösi.
 
-```env
-OPENAI_API_KEY=...
-GOOGLE_API_KEY=...
-ANTHROPIC_API_KEY=...
-XAI_API_KEY=...
-OPENROUTER_API_KEY=...
-ALPHA_VANTAGE_API_KEY=...
-```
+Mahdollisia palveluita ovat esimerkiksi:
+- OpenAI
+- Google
+- Anthropic
+- xAI
+- OpenRouter
+- Alpha Vantage
 
 ---
 
 ## Käyttö komentoriviltä
 
-Ohjelmaa käytetään komentoriviltä alkuperäisen TradingAgents-projektin tavoin.
+Projektia käytetään ensisijaisesti komentoriviltä upstream-projektin toimintamallin mukaisesti.
 
 ```bash
-python -m cli.main
+python main.py
 ```
 
-Käynnistyksen jälkeen käyttäjä voi valita interaktiivisesti analysoitavan tickerin, päivämäärän, käytettävän LLM-palvelun sekä analyysin syvyyden.
+tai tarvittaessa CLI-rakenteen kautta projektin omien asetusten mukaan.
+
+Käynnistyksen jälkeen käyttäjä voi valita analysoitavan tickerin, päivämäärän, käytettävän mallipalvelun sekä analyysin asetuksia.
 
 ---
 
@@ -126,31 +134,27 @@ config = DEFAULT_CONFIG.copy()
 config["llm_provider"] = "anthropic"
 config["deep_think_llm"] = "claude-opus-4"
 config["quick_think_llm"] = "claude-haiku-4"
-config["max_debate_rounds"] = 2
 
 ta = TradingAgentsGraph(debug=True, config=config)
 _, decision = ta.propagate("NOKIA", "2026-03-24")
 print(decision)
 ```
 
-Lisäasetukset löytyvät tiedostosta `tradingagents/default_config.py`.
+Tarkemmat asetukset löytyvät projektin konfiguraatiosta ja upstream-ydintä vastaavista tiedostoista.
 
 ---
 
 ## Arkkitehtuuri
 
-KauppaAgentit hyödyntää useista rooleista koostuvaa analyysiprosessia, jossa eri agentit tarkastelevat markkinaa eri näkökulmista.
+KauppaAgentit hyödyntää usean agentin analyysiprosessia, jossa eri roolit tarkastelevat markkinaa eri näkökulmista. Suomenkielinen haara painottaa erityisesti prompttien lokalisointia, OMXH-käyttöä ja käyttöympäristön mukauttamista.
 
-| Agentti | Rooli |
-|---|---|
-| Fundamenttianalyytikko | Yhtiön taloudellinen analyysi |
-| Sentimenttianalyytikko | Markkinatunnelman arviointi |
-| Uutisanalyytikko | Uutis- ja tapahtumavetoisen tiedon käsittely |
-| Tekninen analyytikko | Teknisten indikaattorien tarkastelu |
-| Tutkijatiimi | Näkemysten vertailu ja väittely |
-| Kaupankäyntiagentti | Päätösehdotuksen muodostaminen |
-| Riskienhallinta | Riskitason arviointi |
-| Portfoliopäällikkö | Lopullinen hyväksyntä- tai hylkäyspäätös |
+Tyypillisiä analyysirooleja ovat:
+- fundamenttianalyysi
+- sentimenttianalyysi
+- uutisanalyysi
+- tekninen analyysi
+- riskienhallinta
+- lopullisen päätösehdotuksen muodostus
 
 ---
 
@@ -170,4 +174,4 @@ Tämä projekti on tarkoitettu tutkimus-, kehitys- ja kokeilukäyttöön. Se ei 
 
 ## Lähtöprojekti ja lisenssi
 
-Tämä repositorio pohjautuu [TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents) -projektiin. Alkuperäinen lisenssi ja upstream-viittaukset tulee säilyttää projektissa.
+Tämä repositorio pohjautuu [TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents) -projektiin. Upstream-viittaukset ja alkuperäinen lisenssi tulee säilyttää projektissa.
