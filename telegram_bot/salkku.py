@@ -2,7 +2,7 @@
 KauppaAgentit — /salkku-komento.
 
 Hallitsee käyttäjän osakkeiden seurantalistaa (watchlist).
-Tallennus: ~/.kauppaagentit/salkku.json
+Tallennus: DATABASE_URL:n mukaiseen tietokantaan.
 
 Alikomennot:
     /salkku          — näytä seurantalista
@@ -11,26 +11,17 @@ Alikomennot:
 """
 from __future__ import annotations
 
-import json
 import logging
-import os
-import tempfile
 from datetime import date
-from pathlib import Path
-from typing import Any
 
 from telegram import Update
 from telegram.ext import ContextTypes
 
 from telegram_bot.omxh import validate_ticker
 from telegram_bot.whitelist import is_allowed
-from tradingagents.dataflows.omxh_utils import resolve_ticker
+from autotrader.storage import get_storage
 
 logger = logging.getLogger(__name__)
-
-# Hakemisto ja tiedostopolku
-_DATA_DIR = Path.home() / ".kauppaagentit"
-_SALKKU_FILE = _DATA_DIR / "salkku.json"
 
 # Enimmäismäärä osakkeita salkussa
 MAX_OSAKKEET = 10
@@ -45,66 +36,24 @@ Salkku = dict[str, list[Osake]]
 # ---------------------------------------------------------------------------
 
 
-def _varmista_hakemisto() -> None:
-    """Luo ~/.kauppaagentit-hakemiston jos se puuttuu."""
-    _DATA_DIR.mkdir(parents=True, exist_ok=True)
-
-
 def _lataa_salkku() -> Salkku:
-    """
-    Lataa salkku JSON-tiedostosta.
-    Palauttaa tyhjän sanakirjan jos tiedostoa ei ole tai se on viallinen.
-    """
-    if not _SALKKU_FILE.exists():
-        return {}
-    try:
-        with open(_SALKKU_FILE, encoding="utf-8") as f:
-            data: Any = json.load(f)
-        if isinstance(data, dict):
-            return data
-        logger.warning("Salkku.json:n rakenne on virheellinen — nollataan.")
-        return {}
-    except (json.JSONDecodeError, OSError) as e:
-        logger.error(f"Salkkutiedoston luku epäonnistui: {e}")
-        return {}
+    """Yhteensopiva koko salkun luku ei ole käytössä DB-tallennuksessa."""
+    return {}
 
 
 def _tallenna_salkku(salkku: Salkku) -> None:
-    """
-    Tallentaa salkkudatan JSON-tiedostoon thread-safe temp-file-patternilla.
-    Kirjoittaa ensin väliaikaistiedostoon, sitten siirtää atomisesti.
-    """
-    _varmista_hakemisto()
-    try:
-        fd, tmp_path = tempfile.mkstemp(dir=_DATA_DIR, suffix=".tmp", prefix="salkku_")
-        try:
-            with os.fdopen(fd, "w", encoding="utf-8") as f:
-                json.dump(salkku, f, ensure_ascii=False, indent=2)
-            # Atominen siirto — korvaa mahdollisen vanhan tiedoston
-            os.replace(tmp_path, _SALKKU_FILE)
-        except Exception:
-            # Siivoa epäonnistunut väliaikaistiedosto
-            try:
-                os.unlink(tmp_path)
-            except OSError:
-                pass
-            raise
-    except OSError as e:
-        logger.error(f"Salkkutiedoston tallennus epäonnistui: {e}")
-        raise
+    """Yhteensopivuusfunktio vanhoille testeille; DB-koodi ei kutsu tätä."""
+    return None
 
 
 def _hae_kayttajan_osakkeet(user_id: int) -> list[Osake]:
     """Palauttaa käyttäjän osakkeiden listan. Tyhjä lista jos ei ole."""
-    salkku = _lataa_salkku()
-    return salkku.get(str(user_id), [])
+    return get_storage().list_watchlist(user_id)
 
 
 def _aseta_kayttajan_osakkeet(user_id: int, osakkeet: list[Osake]) -> None:
-    """Tallentaa käyttäjän osakkeiden listan."""
-    salkku = _lataa_salkku()
-    salkku[str(user_id)] = osakkeet
-    _tallenna_salkku(salkku)
+    """Ei käytössä DB-tallennuksessa."""
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -137,7 +86,7 @@ def _lisaa_osake(user_id: int, yf_ticker: str, nimi: str) -> tuple[bool, str]:
         "nimi": nimi,
         "lisatty": str(date.today()),
     })
-    _aseta_kayttajan_osakkeet(user_id, osakkeet)
+    get_storage().add_watchlist_item(user_id, yf_ticker, nimi, str(date.today()))
     return True, f"[VALMIS] {nimi} lisatty seurantaan."
 
 
@@ -148,18 +97,10 @@ def _poista_osake(user_id: int, nimi: str) -> tuple[bool, str]:
     Vertailu tehdään isoilla kirjaimilla (case-insensitive).
     Palauttaa (onnistui: bool, viesti: str).
     """
-    osakkeet = _hae_kayttajan_osakkeet(user_id)
-    nimi_iso = nimi.upper()
-
-    uudet = [
-        o for o in osakkeet
-        if o["nimi"].upper() != nimi_iso and o["ticker"].upper() != nimi_iso
-    ]
-
-    if len(uudet) == len(osakkeet):
+    poistettu = get_storage().remove_watchlist_item(user_id, nimi)
+    if poistettu <= 0:
         return False, f"[VIRHE] {nimi} ei ole seurantalistalla."
 
-    _aseta_kayttajan_osakkeet(user_id, uudet)
     return True, f"[VALMIS] {nimi} poistettu seurannasta."
 
 

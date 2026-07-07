@@ -9,6 +9,7 @@ from telegram_bot.whitelist import is_allowed
 from telegram_bot.omxh import validate_ticker
 from telegram_bot.task_runner import run_analysis
 from telegram_bot.formatter import format_full_report_parts, _strip_markdown as _strip_markdown_import
+from autotrader.storage import get_storage
 
 logger = logging.getLogger(__name__)
 
@@ -39,11 +40,8 @@ def _split_at_newline(text: str, limit: int) -> list[str]:
 # Omistetaan handlers.py:ssä: Lock on handler-tason logiikkaa, ei task_runner-tason
 analysis_lock = asyncio.Lock()
 
-# Tallennetaan koko raportit ja tilat muistiin inline-nappia varten
-# { message_id: full_report_text / state_dict }
-# Huom: Kasvaa rajattomasti pitkässä ajossa — riittää suljetulle ryhmälle MVP:ssä
-_full_reports: dict[int, str] = {}
-_full_states: dict[int, dict] = {}
+# Koko raportit tallennetaan DB:hen inline-nappia varten, jotta Railway-redeploy
+# ei tyhjennä raporttien tilaa.
 
 
 async def analysoi_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -124,8 +122,7 @@ async def analysoi_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             summary,
             reply_markup=keyboard,
         )
-    _full_reports[result_msg.message_id] = full_report
-    _full_states[result_msg.message_id] = final_state
+    get_storage().save_telegram_report(result_msg.message_id, full_report, final_state)
     await progress_msg.delete()
 
 
@@ -137,15 +134,13 @@ async def full_report_callback(update: Update, context: ContextTypes.DEFAULT_TYP
     if not is_allowed(query.from_user.id):
         return
 
-    full_report = _full_reports.get(query.message.message_id)
+    full_report, state = get_storage().get_telegram_report(query.message.message_id)
     if not full_report:
         await query.message.reply_text(
             "[VIRHE] Raportti ei ole enää saatavilla. Aja /analysoi uudelleen."
         )
         return
 
-    # Hae alkuperäinen state full_report-avaimesta (tallennetaan alla)
-    state = _full_states.get(query.message.message_id)
     if state:
         for part in format_full_report_parts(state):
             try:

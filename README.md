@@ -1,177 +1,150 @@
 # KauppaAgentit
 
-Suomenkielinen TradingAgents-haara Helsingin pörssin (OMXH) osakkeiden analysointiin.
-
-> Projekti pohjautuu [TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents)-kehykseen ja tuo siihen suomenkielisiä promptteja, OMXH-käyttöön sovitettuja muutoksia sekä paikallisia integraatioita.
+Suomenkielinen forkki [TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents) -projektista. Repo painottaa OMXH-kayttoa, suomalaisia uutislahteita, suomenkielisia agenttipromptteja, Telegram-kayttoa ja demoautotraderia.
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python 3.13+](https://img.shields.io/badge/Python-3.13+-green.svg)](https://python.org)
 [![Upstream: TradingAgents](https://img.shields.io/badge/Upstream-TradingAgents-orange.svg)](https://github.com/TauricResearch/TradingAgents)
 
----
+## Vastuuvapautus
 
-## Yleiskuva
+Tama on AI:n tuottama analyysi, ei sijoitussuositus. Tee sijoituspaatokset oman harkintasi mukaan.
 
-KauppaAgentit on suomenkielinen toteutus TradingAgents-kehyksestä. Sen tarkoitus on helpottaa monen agentin LLM-pohjaisen analyysiputken käyttöä suomalaisessa markkinaympäristössä, erityisesti OMXH-yhtiöiden tarkastelussa.
+KauppaAgentit on tutkimus- ja oppimiskayttoon tarkoitettu analyysityokalu. Projekti ei ole Finanssivalvonnan valvomaa sijoitusneuvontaa eika sita tule kayttaa henkilokohtaisena sijoitusneuvona.
 
-Projekti säilyttää upstream-rakenteen ytimen, mutta lisää suomenkielisiä prompteja, paikallisia asetuksia sekä käyttöä tukevia komponentteja. Käyttö tapahtuu pääasiassa komentoriviltä.
+## Mita tassa forkissa on
 
-Keskeiset painopisteet:
-- suomenkieliset promptit ja analyysipolut
-- OMXH-painotteinen käyttö
-- komentorivikäyttö alkuperäisen projektin tapaan
-- paikalliset laajennukset ja integraatiot
-- Docker- ja ympäristömuuttujapohjainen käyttöönotto
-
----
-
-## Keskeiset ominaisuudet
-
-- **Suomenkieliset promptit** (`fi_prompts/`) agenttien ohjaukseen
-- **Komentorivikäyttö** (`cli/`) interaktiiviseen ajamiseen
-- **Upstream-yhteensopiva ydin** (`tradingagents/`) säilytettynä pohjana
-- **Tietokantakomponentit** (`db/`) paikallista tallennusta ja skeemaa varten
-- **Telegram-botti** (`telegram_bot/`) vaihtoehtoisena käyttörajapintana
-- **Testit** (`tests/`) kehityksen ja regressioiden tueksi
-- **Docker-tuki** (`Dockerfile`, `docker-compose.yml`) käyttöönottoon eri ympäristöissä
-
----
+- suomenkieliset promptit `fi_prompts/`-hakemistossa
+- OMXH- ja pohjoismaatuki `tradingagents/dataflows/omxh_utils.py`-tiedostossa
+- suomalaiset uutislahteet ja ticker-resoluutio
+- Telegram-botti analyysille, salkulle ja halytyksille
+- PostgreSQL/SQLite-pohjainen tallennus analyysi- ja autotrader-ajojen seurantaan
+- demoautotrader `autotrader/`-pakettina Saxo SIM -polulle
 
 ## Projektirakenne
 
 ```text
 TradingAgents-Finnish/
-├── assets/               # Projektin resurssit
-├── cli/                  # Komentoriviliittymä
-├── db/                   # Tietokantaskeema ja siihen liittyvät tiedostot
-├── fi_prompts/           # Suomenkieliset promptit
-├── telegram_bot/         # Telegram-käyttöliittymä
-├── tests/                # Testit
-├── tradingagents/        # Upstream-pohjainen ydin
-├── Dockerfile
-├── docker-compose.yml
-├── main.py
-├── pyproject.toml
-├── requirements.txt
-└── README.md
+|- tradingagents/   # upstream-pohjainen analyysiydin
+|- fi_prompts/      # suomenkieliset promptit
+|- cli/             # komentoriviliittyma
+|- telegram_bot/    # Telegram-botti
+|- autotrader/      # demoautotrader ja broker-abstraktiot
+|- db/              # skeema ja migraatiot
+|- docs/            # kaytto- ja deploy-ohjeet
+`- tests/           # testit
 ```
 
----
-
 ## Asennus
-
-### 1. Kloonaa repositorio
 
 ```bash
 git clone https://github.com/Murtsi/TradingAgents-Finnish.git
 cd TradingAgents-Finnish
-```
-
-### 2. Luo ympäristö
-
-```bash
 conda create -n tradingagents python=3.13
 conda activate tradingagents
+pip install -e ".[dev]"
 ```
 
-Vaihtoehtoisesti voit käyttää `uv`:ta:
+Vaihtoehtoisesti voit kayttaa Dockeria:
 
 ```bash
-uv sync
+cp .env.example .env
+docker compose run --rm tradingagents
 ```
 
-### 3. Asenna riippuvuudet
+## Ympäristömuuttujat
 
-```bash
-pip install -e .
-```
-
-tai
-
-```bash
-pip install -r requirements.txt
-```
-
-### 4. Lisää ympäristömuuttujat
+Kopioi `.env.example` pohjaksi:
 
 ```bash
 cp .env.example .env
 ```
 
-Täytä sen jälkeen tarvittavat API-avaimet omaan ympäristöösi.
+Tyypillisimmat avaimet:
 
-Mahdollisia palveluita ovat esimerkiksi:
-- OpenAI
-- Google
-- Anthropic
-- xAI
-- OpenRouter
-- Alpha Vantage
-
----
-
-## Käyttö komentoriviltä
-
-Projektia käytetään ensisijaisesti komentoriviltä upstream-projektin toimintamallin mukaisesti.
-
-```bash
-python main.py
+```env
+ANTHROPIC_API_KEY=...
+OPENAI_API_KEY=...
+GOOGLE_API_KEY=...
+OPENROUTER_API_KEY=...
+ALPHA_VANTAGE_API_KEY=...
+TELEGRAM_BOT_TOKEN=...
+TELEGRAM_WHITELIST=123456789
+DATABASE_URL=postgresql://...
 ```
 
-tai tarvittaessa CLI-rakenteen kautta projektin omien asetusten mukaan.
+Autotraderille:
 
-Käynnistyksen jälkeen käyttäjä voi valita analysoitavan tickerin, päivämäärän, käytettävän mallipalvelun sekä analyysin asetuksia.
+```env
+BROKER=saxo
+SAXO_ENV=sim
+SAXO_TOKEN=...
+AUTOTRADER_DRY_RUN=1
+```
 
----
+## Kaytto
 
-## Python-käyttö
+Komentorivi:
+
+```bash
+python -m cli.main
+python -m cli.main fi
+```
+
+Telegram-botti:
+
+```bash
+python -m telegram_bot.bot
+```
+
+Autotrader kerran ajettuna:
+
+```bash
+python -m autotrader.engine --once --dry-run --date 2026-07-07
+```
+
+Ajastettu worker:
+
+```bash
+python -m autotrader.scheduler
+```
+
+## Python-esimerkki
 
 ```python
 from tradingagents.graph.trading_graph import TradingAgentsGraph
-from tradingagents.default_config import DEFAULT_CONFIG
+from tradingagents.finnish_config import get_finnish_config
 
-config = DEFAULT_CONFIG.copy()
-config["llm_provider"] = "anthropic"
-config["deep_think_llm"] = "claude-opus-4"
-config["quick_think_llm"] = "claude-haiku-4"
+config = get_finnish_config({
+    "llm_provider": "anthropic",
+    "deep_think_llm": "claude-haiku-4-5-20251001",
+    "quick_think_llm": "claude-haiku-4-5-20251001",
+})
 
-ta = TradingAgentsGraph(debug=True, config=config)
-_, decision = ta.propagate("NOKIA", "2026-03-24")
+graph = TradingAgentsGraph(debug=False, config=config)
+final_state, decision = graph.propagate("NOKIA", "2026-07-07")
 print(decision)
 ```
 
-Tarkemmat asetukset löytyvät projektin konfiguraatiosta ja upstream-ydintä vastaavista tiedostoista.
-
----
-
-## Arkkitehtuuri
-
-KauppaAgentit hyödyntää usean agentin analyysiprosessia, jossa eri roolit tarkastelevat markkinaa eri näkökulmista. Suomenkielinen haara painottaa erityisesti prompttien lokalisointia, OMXH-käyttöä ja käyttöympäristön mukauttamista.
-
-Tyypillisiä analyysirooleja ovat:
-- fundamenttianalyysi
-- sentimenttianalyysi
-- uutisanalyysi
-- tekninen analyysi
-- riskienhallinta
-- lopullisen päätösehdotuksen muodostus
-
----
-
-## Testaus
+## Kehitys ja testaus
 
 ```bash
-pytest tests/
+pytest -q
+ruff check .
+python -m compileall tradingagents telegram_bot autotrader
 ```
 
----
+GitHub Actions ajaa testit ja linttauksen automaattisesti `main`-haaralle ja pull requesteille.
 
-## Huomioitavaa
+## Deploy
 
-Tämä projekti on tarkoitettu tutkimus-, kehitys- ja kokeilukäyttöön. Se ei ole sijoitusneuvontaa eikä takaa kaupankäyntituloksia.
+Railway-ohjeet:
 
----
+- [autotrader_railway.md](docs/autotrader_railway.md)
+- [saxo_sim_setup.md](docs/saxo_sim_setup.md)
 
-## Lähtöprojekti ja lisenssi
+Paikallinen parity-ymparisto loytyy [docker-compose.yml](docker-compose.yml)-tiedostosta.
 
-Tämä repositorio pohjautuu [TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents) -projektiin. Upstream-viittaukset ja alkuperäinen lisenssi tulee säilyttää projektissa.
+## Lähtöprojekti
+
+Tama repositorio pohjautuu [TauricResearch/TradingAgents](https://github.com/TauricResearch/TradingAgents) -projektiin. Tavoite on sailyttaa upstream-yhteensopivuus mahdollisimman pitkalle samalla kun suomispesifinen logiikka pidetaan omissa tiedostoissaan tai rajatuissa fork-muutoksissa.

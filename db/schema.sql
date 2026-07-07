@@ -109,3 +109,93 @@ COMMENT ON TABLE agentiraportit  IS 'Yksittäisten agenttien tuottamat raportit'
 COMMENT ON TABLE paatokset       IS 'Salkunhoitajan lopullinen OSTA/PIDÄ/MYY-päätös';
 COMMENT ON TABLE portfolio       IS 'Käyttäjän seurattavat positiot (valinnainen)';
 COMMENT ON TABLE hintahistoria   IS 'Yahoo Finance -datan paikallinen välimuisti';
+
+-- =============================================
+-- Autotrader: paper/SIM päiväajot
+-- =============================================
+CREATE TABLE IF NOT EXISTS autotrader_runs (
+    id              SERIAL PRIMARY KEY,
+    run_date        DATE NOT NULL UNIQUE,
+    status          VARCHAR(30) NOT NULL,
+    broker          VARCHAR(30) NOT NULL,
+    dry_run         BOOLEAN NOT NULL DEFAULT FALSE,
+    started_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    finished_at     TIMESTAMPTZ,
+    metadata_json   TEXT,
+    error           TEXT
+);
+
+CREATE TABLE IF NOT EXISTS autotrader_decisions (
+    id              SERIAL PRIMARY KEY,
+    run_id          INTEGER NOT NULL REFERENCES autotrader_runs(id) ON DELETE CASCADE,
+    ticker          VARCHAR(30) NOT NULL,
+    decision        VARCHAR(20) NOT NULL CHECK (decision IN ('BUY', 'OVERWEIGHT', 'HOLD', 'UNDERWEIGHT', 'SELL')),
+    score           NUMERIC(12,4),
+    final_state_json TEXT,
+    error           TEXT,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (run_id, ticker)
+);
+
+CREATE TABLE IF NOT EXISTS autotrader_orders (
+    id              SERIAL PRIMARY KEY,
+    run_id          INTEGER NOT NULL REFERENCES autotrader_runs(id) ON DELETE CASCADE,
+    ticker          VARCHAR(30) NOT NULL,
+    side            VARCHAR(10) NOT NULL CHECK (side IN ('BUY', 'SELL')),
+    amount          NUMERIC(18,6) NOT NULL,
+    estimated_price NUMERIC(18,6) NOT NULL,
+    status          VARCHAR(30) NOT NULL,
+    reason          TEXT,
+    broker_order_id VARCHAR(100),
+    raw_json        TEXT,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS autotrader_equity_curve (
+    id              SERIAL PRIMARY KEY,
+    run_date        DATE NOT NULL UNIQUE,
+    equity          NUMERIC(18,4) NOT NULL,
+    cash            NUMERIC(18,4) NOT NULL,
+    benchmark_symbol VARCHAR(30),
+    benchmark_price NUMERIC(18,6),
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS autotrader_uic_map (
+    ticker          VARCHAR(30) PRIMARY KEY,
+    uic             INTEGER NOT NULL,
+    asset_type      VARCHAR(30) NOT NULL DEFAULT 'Stock',
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS autotrader_wallet (
+    key             VARCHAR(100) PRIMARY KEY,
+    value_json      TEXT NOT NULL,
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS telegram_watchlist (
+    user_id         VARCHAR(50) NOT NULL,
+    ticker          VARCHAR(30) NOT NULL,
+    nimi            VARCHAR(100) NOT NULL,
+    lisatty         DATE NOT NULL,
+    PRIMARY KEY (user_id, ticker)
+);
+
+CREATE TABLE IF NOT EXISTS telegram_alerts (
+    user_id         VARCHAR(50) NOT NULL,
+    ticker          VARCHAR(30) NOT NULL,
+    nimi            VARCHAR(100) NOT NULL,
+    tyyppi          VARCHAR(20) NOT NULL CHECK (tyyppi IN ('lasku', 'nousu')),
+    prosentti       NUMERIC(8,4) NOT NULL,
+    hinta_luontihetkella NUMERIC(18,6) NOT NULL,
+    luotu           DATE NOT NULL,
+    PRIMARY KEY (user_id, ticker)
+);
+
+CREATE TABLE IF NOT EXISTS telegram_reports (
+    message_id      VARCHAR(100) PRIMARY KEY,
+    full_report     TEXT NOT NULL,
+    state_json      TEXT,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

@@ -1,18 +1,16 @@
 """
 Hintahälytysten hallinta Telegram-botille.
 
-Tallentaa hälytykset JSON-tiedostoon ~/.kauppaagentit/halytykset.json.
+Tallentaa hälytykset DATABASE_URL:n mukaiseen tietokantaan.
 Tukee nousua (+%) ja laskua (-%) koskevia hälytyksiä OMXH-osakkeille.
 
 FORK: Suomi-lokalisointi — uusi tiedosto
 """
 from __future__ import annotations
 
-import json
 import logging
 import re
 from datetime import date
-from pathlib import Path
 from typing import TypedDict
 
 from telegram import Update
@@ -20,16 +18,12 @@ from telegram.ext import ContextTypes
 
 from telegram_bot.omxh import validate_ticker, get_current_price
 from telegram_bot.whitelist import is_allowed
-from tradingagents.dataflows.omxh_utils import resolve_ticker
+from autotrader.storage import get_storage
 
 logger = logging.getLogger(__name__)
 
 # Maksimi hälytyksiä per käyttäjä
 MAX_HALYTYKSET_PER_KAYTTAJA = 20
-
-# Tallennuspolku
-HALYTYKSET_HAKEMISTO = Path.home() / ".kauppaagentit"
-HALYTYKSET_TIEDOSTO = HALYTYKSET_HAKEMISTO / "halytykset.json"
 
 # Regex prosentin parsimiseen: +5%, -3%, +10.5%
 PROSENTTI_REGEX = re.compile(r"^([+-])(\d+(?:\.\d+)?)%$")
@@ -47,27 +41,13 @@ class Halytys(TypedDict):
 
 
 def _lue_halytykset() -> dict[str, list[Halytys]]:
-    """Lukee hälytykset JSON-tiedostosta. Palauttaa tyhjän dictin virhetilanteessa."""
-    if not HALYTYKSET_TIEDOSTO.exists():
-        return {}
-    try:
-        with open(HALYTYKSET_TIEDOSTO, encoding="utf-8") as f:
-            return json.load(f)
-    except (json.JSONDecodeError, OSError) as e:
-        logger.error(f"Hälytysten lukeminen epäonnistui: {e}")
-        return {}
+    """Yhteensopivuusfunktio vanhalle JSON-polulle; DB-koodi lukee käyttäjäkohtaisesti."""
+    return {}
 
 
 def _tallenna_halytykset(data: dict[str, list[Halytys]]) -> bool:
-    """Tallentaa hälytykset JSON-tiedostoon. Palauttaa True onnistuessa."""
-    try:
-        HALYTYKSET_HAKEMISTO.mkdir(parents=True, exist_ok=True)
-        with open(HALYTYKSET_TIEDOSTO, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        return True
-    except OSError as e:
-        logger.error(f"Hälytysten tallennus epäonnistui: {e}")
-        return False
+    """Yhteensopivuusfunktio vanhalle JSON-polulle."""
+    return True
 
 
 def _laske_halytysraja(hinta: float, tyyppi: str, prosentti: float) -> float:
@@ -127,8 +107,7 @@ async def halytys_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     # --- /halytys (ilman argumentteja) tai /halytys lista ---
     if not args or args[0].lower() == "lista":
-        data = _lue_halytykset()
-        kayttajan_halytykset: list[Halytys] = data.get(str(user_id), [])
+        kayttajan_halytykset: list[Halytys] = get_storage().list_alerts(user_id)
         await update.message.reply_text(_muotoile_lista(kayttajan_halytykset))
         return
 
@@ -141,25 +120,16 @@ async def halytys_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             return
 
         poistettava_nimi = args[1].upper().strip()
-        data = _lue_halytykset()
-        kayttajan_halytykset = data.get(str(user_id), [])
-
-        alkuperainen_maara = len(kayttajan_halytykset)
-        suodatettu = [h for h in kayttajan_halytykset if h["nimi"] != poistettava_nimi]
-
-        if len(suodatettu) == alkuperainen_maara:
+        poistettu = get_storage().remove_alert(user_id, poistettava_nimi)
+        if poistettu <= 0:
             await update.message.reply_text(
                 f"[VIRHE] Hälytystä ei löydy: {poistettava_nimi}\n\nTarkista aktiiviset hälytykset: /halytys lista"
             )
             return
 
-        data[str(user_id)] = suodatettu
-        if _tallenna_halytykset(data):
-            await update.message.reply_text(
-                f"[VALMIS] Hälytys poistettu: {poistettava_nimi}\n\nAktiiviset hälytykset: /halytys lista"
-            )
-        else:
-            await update.message.reply_text("[VIRHE] Tallennus epäonnistui. Yrita uudelleen.")
+        await update.message.reply_text(
+            f"[VALMIS] Hälytys poistettu: {poistettava_nimi}\n\nAktiiviset hälytykset: /halytys lista"
+        )
         return
 
     # --- /halytys <OSAKE> <+/->PROSENTTI% ---
@@ -210,18 +180,15 @@ async def halytys_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
 
     # Tarkista käyttäjän hälytysraja
-    data = _lue_halytykset()
-    kayttajan_halytykset = data.get(str(user_id), [])
+    kayttajan_halytykset = get_storage().list_alerts(user_id)
 
-    if len(kayttajan_halytykset) >= MAX_HALYTYKSET_PER_KAYTTAJA:
+    on_paivitys = any(h["nimi"] == raw_nimi or h["ticker"] == yf_ticker for h in kayttajan_halytykset)
+    if not on_paivitys and len(kayttajan_halytykset) >= MAX_HALYTYKSET_PER_KAYTTAJA:
         await update.message.reply_text(
             f"[VIRHE] Hälytysraja ({MAX_HALYTYKSET_PER_KAYTTAJA}) saavutettu.\n\n"
             "Poista ensin vanha hälytys: /halytys poista <OSAKE>"
         )
         return
-
-    # Poista mahdollinen aiempi hälytys samalle osakkeelle (yksi per osake)
-    kayttajan_halytykset = [h for h in kayttajan_halytykset if h["nimi"] != raw_nimi]
 
     uusi: Halytys = {
         "ticker": yf_ticker,
@@ -231,12 +198,7 @@ async def halytys_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         "hinta_luontihetkella": hinta,
         "luotu": date.today().isoformat(),
     }
-    kayttajan_halytykset.append(uusi)
-    data[str(user_id)] = kayttajan_halytykset
-
-    if not _tallenna_halytykset(data):
-        await update.message.reply_text("[VIRHE] Tallennus epäonnistui. Yrita uudelleen.")
-        return
+    get_storage().upsert_alert(user_id, uusi)
 
     halytysraja = _laske_halytysraja(hinta, tyyppi, prosentti)
     suunta_teksti = f"laskee {prosentti:.0f}%" if tyyppi == "lasku" else f"nousee {prosentti:.0f}%"

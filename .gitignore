@@ -120,6 +120,8 @@ Thumbs.db
 # ===== AI TOOLING (local dev only) =====
 .claude-flow/
 .claude/
+.agents/
+.codex/
 .mcp.json
 CLAUDE.md
 AGENTS.md
@@ -130,3 +132,6 @@ GEMINI.md
 
 # ===== INTERNAL PLANNING DOCS =====
 docs/superpowers/
+
+# ===== ENTERPRISE / GENERATED REPORTS =====
+.env.enterprise

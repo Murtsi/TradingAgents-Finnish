@@ -28,8 +28,10 @@ logger = logging.getLogger(__name__)
 # Projektin juuri absoluuttisena polkuna
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Yksi executor — max_workers=1 koska handlers.py:n Lock estää rinnakkaisajot
-_executor = ThreadPoolExecutor(max_workers=1)
+# Budjetoitu executor. Telegram pitää edelleen handler-tason Lockin, mutta
+# batch/autotrader-polku voi nostaa worker-määrää ympäristömuuttujalla.
+ANALYSIS_MAX_WORKERS = int(os.getenv("ANALYSIS_MAX_WORKERS", "1"))
+_executor = ThreadPoolExecutor(max_workers=ANALYSIS_MAX_WORKERS)
 
 # Analyysin timeout sekunteina (10 minuuttia)
 ANALYSIS_TIMEOUT_SEC = 600
